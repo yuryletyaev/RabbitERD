@@ -617,11 +617,17 @@
             const queues = topology.queues || [];
             const bindings = topology.bindings || [];
             
-            // Очищаем фильтры
+            // Получаем элементы фильтров
             const virtualHostFilter = document.getElementById('virtualHostFilter');
             const exchangeFilter = document.getElementById('exchangeFilter');
             const routeFilter = document.getElementById('routeFilter');
             const queueFilter = document.getElementById('queueFilter');
+            
+            // Сохраняем текущие значения фильтров
+            const currentVirtualHost = virtualHostFilter.value;
+            const currentExchange = exchangeFilter.value;
+            const currentRoute = routeFilter.value;
+            const currentQueue = queueFilter.value;
             
             // Очищаем опции
             virtualHostFilter.innerHTML = '<option value="">Все VirtualHost</option>';
@@ -694,6 +700,24 @@
                 currentFilters.queue = e.target.value;
                 updateVisualization();
             });
+            
+            // Восстанавливаем сохраненные значения
+            if (currentVirtualHost) {
+                virtualHostFilter.value = currentVirtualHost;
+                currentFilters.virtualHost = currentVirtualHost;
+            }
+            if (currentExchange) {
+                exchangeFilter.value = currentExchange;
+                currentFilters.exchange = currentExchange;
+            }
+            if (currentRoute) {
+                routeFilter.value = currentRoute;
+                currentFilters.route = currentRoute;
+            }
+            if (currentQueue) {
+                queueFilter.value = currentQueue;
+                currentFilters.queue = currentQueue;
+            }
         }
         
         // Обработчики кнопок
