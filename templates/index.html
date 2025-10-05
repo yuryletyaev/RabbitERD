@@ -349,8 +349,12 @@
         
         // Фильтрация блоков VirtualHost
         function filterVirtualHostBlocks(blocks) {
-            return blocks.filter(block => {
+            console.log('Фильтрация с параметрами:', currentFilters);
+            console.log('Всего блоков до фильтрации:', blocks.length);
+            
+            const filtered = blocks.filter(block => {
                 if (currentFilters.virtualHost && block.virtualHost.name !== currentFilters.virtualHost) {
+                    console.log('Блок отфильтрован по VirtualHost:', block.virtualHost.name, '!=', currentFilters.virtualHost);
                     return false;
                 }
                 
@@ -379,6 +383,9 @@
                 
                 return true;
             });
+            
+            console.log('Блоков после фильтрации:', filtered.length);
+            return filtered;
         }
         
         // Рисование блоков VirtualHost
@@ -683,21 +690,25 @@
             // Обработчики фильтров
             virtualHostFilter.addEventListener('change', (e) => {
                 currentFilters.virtualHost = e.target.value;
+                console.log('Фильтр VirtualHost изменен на:', e.target.value);
                 updateVisualization();
             });
             
             exchangeFilter.addEventListener('change', (e) => {
                 currentFilters.exchange = e.target.value;
+                console.log('Фильтр Exchange изменен на:', e.target.value);
                 updateVisualization();
             });
             
             routeFilter.addEventListener('change', (e) => {
                 currentFilters.route = e.target.value;
+                console.log('Фильтр Route изменен на:', e.target.value);
                 updateVisualization();
             });
             
             queueFilter.addEventListener('change', (e) => {
                 currentFilters.queue = e.target.value;
+                console.log('Фильтр Queue изменен на:', e.target.value);
                 updateVisualization();
             });
             
