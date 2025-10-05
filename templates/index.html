@@ -4,27 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RabbitMQ ERD Visualizer</title>
-    <script src="https://d3js.org/d3.v7.min.js" onerror="loadD3Fallback()"></script>
-    <script>
-        function loadD3Fallback() {
-            console.warn('Не удалось загрузить D3.js с CDN, пробуем альтернативный источник...');
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/d3@7';
-            script.onload = () => {
-                console.log('D3.js загружен с альтернативного CDN');
-                if (typeof initVisualization === 'function') {
-                    initVisualization();
-                }
-            };
-            script.onerror = () => {
-                console.error('Не удалось загрузить D3.js с альтернативного CDN');
-                showError('Не удалось загрузить библиотеку D3.js. Проверьте подключение к интернету.');
-            };
-
-            
-            document.head.appendChild(script);
-        }
-    </script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -67,20 +47,8 @@
     </div>
     
     <script>
-        // Данные топологии с проверкой
-        const topology = {{ topology|tojson }} || {
-            exchanges: [],
-            queues: [],
-            bindings: [],
-            connections: []
-        };
-        
-        // Отладочная информация
-        console.log('Данные топологии:', topology);
-        console.log('D3 доступен:', typeof d3 !== 'undefined');
-        console.log('Количество обменов:', topology.exchanges ? topology.exchanges.length : 0);
-        console.log('Количество очередей:', topology.queues ? topology.queues.length : 0);
-        console.log('Количество связей:', topology.connections ? topology.connections.length : 0);
+        // Данные топологии
+        const topology = {{ topology|tojson }};
         
         // Настройки визуализации
         const config = {
@@ -96,34 +64,11 @@
         
         let svg, g, zoom;
         let simulation;
-        let animationTimeouts = []; // Для отслеживания анимаций
-        const MAX_ANIMATIONS = 10; // Максимальное количество одновременных анимаций
-        
-        // Проверка доступности D3
-        if (typeof d3 === 'undefined') {
-            console.error('D3.js не загружен!');
-            document.body.innerHTML = '<div class="error-container"><h2>Ошибка загрузки D3.js</h2><p>Не удалось загрузить библиотеку D3.js</p></div>';
-        }
         
         // Инициализация визуализации
         function initVisualization() {
             try {
-                // Проверка доступности D3
-                if (typeof d3 === 'undefined') {
-                    throw new Error('D3.js не загружен');
-                }
-                
-                // Проверка наличия SVG элемента
-                const diagramElement = document.getElementById('diagram');
-                if (!diagramElement) {
-                    throw new Error('SVG элемент не найден');
-                }
-                
                 svg = d3.select('#diagram');
-                if (svg.empty()) {
-                    throw new Error('Не удалось выбрать SVG элемент');
-                }
-                
                 g = svg.append('g');
                 
                 // Настройка зума
@@ -135,253 +80,165 @@
                 
                 svg.call(zoom);
                 
-                // Инициализация без force simulation
-                simulation = null; // Не используем force simulation
+                // Создание симуляции
+                simulation = d3.forceSimulation()
+                    .force('link', d3.forceLink().id(d => d.id).distance(200))
+                    .force('charge', d3.forceManyBody().strength(-300))
+                    .force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
                 
                 updateVisualization();
             } catch (error) {
                 console.error('Ошибка инициализации:', error);
-                showError('Ошибка инициализации визуализации: ' + error.message);
-            }
-        }
-        
-        // Функция очистки анимаций
-        function clearAnimations() {
-            animationTimeouts.forEach(timeout => clearTimeout(timeout));
-            animationTimeouts = [];
-        }
-        
-        // Функция добавления анимации с ограничением
-        function addAnimation(callback, delay = 0) {
-            if (animationTimeouts.length >= MAX_ANIMATIONS) {
-                console.warn('Превышено максимальное количество анимаций');
-                return;
-            }
-            
-            const timeout = setTimeout(callback, delay);
-            animationTimeouts.push(timeout);
-            return timeout;
-        }
-        
-        // Функция показа ошибок
-        function showError(message) {
-            clearAnimations(); // Останавливаем все анимации
-            const container = document.querySelector('.visualization-container');
-            if (container) {
-                container.innerHTML = `
-                    <div class="error-container">
-                        <div class="error-icon">⚠️</div>
-                        <h2>Ошибка визуализации</h2>
-                        <p>${message}</p>
-                        <button onclick="location.reload()" class="btn">Перезагрузить</button>
-                    </div>
-                `;
+                document.querySelector('.visualization-container').innerHTML = 
+                    '<div class="error-container"><h2>Ошибка инициализации</h2><p>' + error.message + '</p></div>';
             }
         }
         
         // Обновление визуализации
         function updateVisualization() {
             try {
-                // Очищаем предыдущие анимации
-                clearAnimations();
-                
                 // Проверка данных
                 if (!topology) {
-                    throw new Error('Данные топологии не загружены');
-                }
-                
-                // Подготовка данных
-                const nodes = [];
-                const links = topology.connections || [];
-                
-                // Добавляем обмены
-                if (topology.exchanges && Array.isArray(topology.exchanges)) {
-                    topology.exchanges.forEach(exchange => {
-                        if (exchange && exchange.name) {
-                            nodes.push({
-                                id: `exchange_${exchange.name}`,
-                                name: exchange.name,
-                                type: 'exchange',
-                                data: exchange
-                            });
-                        }
-                    });
-                }
-                
-                // Добавляем очереди
-                if (topology.queues && Array.isArray(topology.queues)) {
-                    topology.queues.forEach(queue => {
-                        if (queue && queue.name) {
-                            nodes.push({
-                                id: `queue_${queue.name}`,
-                                name: queue.name,
-                                type: 'queue',
-                                data: queue
-                            });
-                        }
-                    });
-                }
-                
-                // Очистка предыдущих элементов
-                g.selectAll('*').remove();
-                
-                // Создание связей
-                const link = g.append('g')
-                    .attr('class', 'links')
-                    .selectAll('line')
-                    .data(links)
-                    .enter().append('line')
-                    .attr('stroke', config.colors.connection)
-                    .attr('stroke-width', 2)
-                    .attr('stroke-opacity', 0.8)
-                    .attr('x1', d => {
-                        const source = nodes.find(n => n.id === d.from.id);
-                        return source ? source.x : 0;
-                    })
-                    .attr('y1', d => {
-                        const source = nodes.find(n => n.id === d.from.id);
-                        return source ? source.y : 0;
-                    })
-                    .attr('x2', d => {
-                        const dest = nodes.find(n => n.id === d.to.id);
-                        return dest ? dest.x : 0;
-                    })
-                    .attr('y2', d => {
-                        const dest = nodes.find(n => n.id === d.to.id);
-                        return dest ? dest.y : 0;
-                    });
-                
-                // Создание узлов
-                const node = g.append('g')
-                    .attr('class', 'nodes')
-                    .selectAll('g')
-                    .data(nodes)
-                    .enter().append('g')
-                    .attr('class', 'node')
-                    .call(d3.drag()
-                        .on('start', dragstarted)
-                        .on('drag', dragged)
-                        .on('end', dragended));
-                
-                // Добавление прямоугольников для узлов
-                node.append('rect')
-                    .attr('width', config.nodeWidth)
-                    .attr('height', config.nodeHeight)
-                    .attr('rx', 10)
-                    .attr('fill', d => d.type === 'exchange' ? config.colors.exchange : config.colors.queue)
-                    .attr('stroke', '#333')
-                    .attr('stroke-width', 2);
-                
-                // Добавление текста
-                node.append('text')
-                    .attr('x', config.nodeWidth / 2)
-                    .attr('y', config.nodeHeight / 2)
-                    .attr('text-anchor', 'middle')
-                    .attr('dy', '0.35em')
-                    .attr('fill', 'white')
-                    .attr('font-weight', 'bold')
-                    .attr('font-size', '12px')
-                    .text(d => d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name);
-                
-                // Добавление типа узла
-                node.append('text')
-                    .attr('x', config.nodeWidth / 2)
-                    .attr('y', config.nodeHeight / 2 + 20)
-                    .attr('text-anchor', 'middle')
-                    .attr('dy', '0.35em')
-                    .attr('fill', 'white')
-                    .attr('font-size', '10px')
-                    .text(d => d.type === 'exchange' ? 'Exchange' : 'Queue');
-                
-                // Обработчики событий
-                node.on('click', showDetails);
-                node.on('mouseover', highlightNode);
-                node.on('mouseout', unhighlightNode);
-                
-                // Проверка на пустые данные
-                if (nodes.length === 0) {
-                    console.log('Нет данных для отображения');
-                    g.append('text')
-                        .attr('x', '50%')
-                        .attr('y', '50%')
-                        .attr('text-anchor', 'middle')
-                        .attr('dy', '0.35em')
-                        .attr('font-size', '18px')
-                        .attr('fill', '#666')
-                        .text('Нет данных для отображения');
+                    console.error('Данные топологии не загружены');
                     return;
                 }
-                
-                // Инициализация координат для узлов
-                nodes.forEach(node => {
-                    if (!node.x) node.x = Math.random() * 400 + 100;
-                    if (!node.y) node.y = Math.random() * 300 + 100;
+            
+            // Подготовка данных
+            const nodes = [];
+            const links = topology.connections || [];
+            
+            // Добавляем обмены
+            if (topology.exchanges && Array.isArray(topology.exchanges)) {
+                topology.exchanges.forEach(exchange => {
+                    if (exchange && exchange.name) {
+                        nodes.push({
+                            id: `exchange_${exchange.name}`,
+                            name: exchange.name,
+                            type: 'exchange',
+                            data: exchange
+                        });
+                    }
                 });
-                
-                // Простое позиционирование без force simulation
-                const centerX = svg.node().clientWidth / 2;
-                const centerY = svg.node().clientHeight / 2;
-                const spacing = 200;
-                
-                // Позиционирование узлов в сетку
-                nodes.forEach((node, index) => {
-                    const row = Math.floor(index / 3);
-                    const col = index % 3;
-                    node.x = centerX + (col - 1) * spacing;
-                    node.y = centerY + (row - 1) * spacing;
+            }
+            
+            // Добавляем очереди
+            if (topology.queues && Array.isArray(topology.queues)) {
+                topology.queues.forEach(queue => {
+                    if (queue && queue.name) {
+                        nodes.push({
+                            id: `queue_${queue.name}`,
+                            name: queue.name,
+                            type: 'queue',
+                            data: queue
+                        });
+                    }
                 });
+            }
+            
+            // Проверка на пустые данные
+            if (nodes.length === 0) {
+                console.log('Нет данных для отображения');
+                g.append('text')
+                    .attr('x', '50%')
+                    .attr('y', '50%')
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '0.35em')
+                    .attr('font-size', '18px')
+                    .attr('fill', '#666')
+                    .text('Нет данных для отображения');
+                return;
+            }
+            
+            // Очистка предыдущих элементов
+            g.selectAll('*').remove();
+            
+            // Создание связей
+            const link = g.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('stroke', config.colors.connection)
+                .attr('stroke-width', 2)
+                .attr('stroke-opacity', 0.8);
+            
+            // Создание узлов
+            const node = g.append('g')
+                .attr('class', 'nodes')
+                .selectAll('g')
+                .data(nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // Добавление прямоугольников для узлов
+            node.append('rect')
+                .attr('width', config.nodeWidth)
+                .attr('height', config.nodeHeight)
+                .attr('rx', 10)
+                .attr('fill', d => d.type === 'exchange' ? config.colors.exchange : config.colors.queue)
+                .attr('stroke', '#333')
+                .attr('stroke-width', 2);
+            
+            // Добавление текста
+            node.append('text')
+                .attr('x', config.nodeWidth / 2)
+                .attr('y', config.nodeHeight / 2)
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('fill', 'white')
+                .attr('font-weight', 'bold')
+                .attr('font-size', '12px')
+                .text(d => d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name);
+            
+            // Добавление типа узла
+            node.append('text')
+                .attr('x', config.nodeWidth / 2)
+                .attr('y', config.nodeHeight / 2 + 20)
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('fill', 'white')
+                .attr('font-size', '10px')
+                .text(d => d.type === 'exchange' ? 'Exchange' : 'Queue');
+            
+            // Обработчики событий
+            node.on('click', showDetails);
+            node.on('mouseover', highlightNode);
+            node.on('mouseout', unhighlightNode);
+            
+            // Обновление симуляции
+            if (simulation) {
+                simulation.nodes(nodes);
+                simulation.force('link').links(links);
+                simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source && d.source.x ? d.source.x : 0)
+                    .attr('y1', d => d.source && d.source.y ? d.source.y : 0)
+                    .attr('x2', d => d.destination && d.destination.x ? d.destination.x : 0)
+                    .attr('y2', d => d.destination && d.destination.y ? d.destination.y : 0);
                 
-                // Позиционирование узлов с контролируемой анимацией
                 node.attr('transform', d => {
                     const x = d.x || 0;
                     const y = d.y || 0;
                     return `translate(${x - config.nodeWidth/2}, ${y - config.nodeHeight/2})`;
-                })
-                .style('opacity', 0);
-                
-                // Анимация появления с задержкой
-                addAnimation(() => {
-                    node.transition()
-                        .duration(500)
-                        .style('opacity', 1);
-                }, 100);
-                
-                // Позиционирование связей с контролируемой анимацией
-                link
-                    .attr('x1', d => {
-                        const source = nodes.find(n => n.id === d.from.id);
-                        return source && source.x ? source.x : 0;
-                    })
-                    .attr('y1', d => {
-                        const source = nodes.find(n => n.id === d.from.id);
-                        return source && source.y ? source.y : 0;
-                    })
-                    .attr('x2', d => {
-                        const dest = nodes.find(n => n.id === d.to.id);
-                        return dest && dest.x ? dest.x : 0;
-                    })
-                    .attr('y2', d => {
-                        const dest = nodes.find(n => n.id === d.to.id);
-                        return dest && dest.y ? dest.y : 0;
-                    })
-                    .style('opacity', 0);
-                
-                // Анимация связей с задержкой
-                addAnimation(() => {
-                    link.transition()
-                        .duration(400)
-                        .style('opacity', 0.8);
-                }, 400);
-                
+                });
+            });
+            
+            simulation.alpha(1).restart();
+            }
             } catch (error) {
                 console.error('Ошибка обновления визуализации:', error);
-                showError('Ошибка обновления визуализации: ' + error.message);
+                document.querySelector('.visualization-container').innerHTML = 
+                    '<div class="error-container"><h2>Ошибка визуализации</h2><p>' + error.message + '</p></div>';
             }
         }
         
-        // Функции для перетаскивания (упрощенные)
+        // Функции для перетаскивания
         function dragstarted(event, d) {
-            // Простое перетаскивание без force simulation
+            if (!event.active && simulation) simulation.alphaTarget(0.3).restart();
             d.fx = d.x || 0;
             d.fy = d.y || 0;
         }
@@ -389,11 +246,10 @@
         function dragged(event, d) {
             d.fx = event.x;
             d.fy = event.y;
-            // Обновляем позицию узла
-            d3.select(this).attr('transform', `translate(${event.x - config.nodeWidth/2}, ${event.y - config.nodeHeight/2})`);
         }
         
         function dragended(event, d) {
+            if (!event.active && simulation) simulation.alphaTarget(0);
             d.fx = null;
             d.fy = null;
         }
@@ -434,74 +290,42 @@
         
         // Обработчики кнопок
         document.getElementById('refreshBtn').addEventListener('click', () => {
-            clearAnimations(); // Очищаем анимации перед перезагрузкой
             location.reload();
         });
         
         document.getElementById('zoomInBtn').addEventListener('click', () => {
-            if (svg && zoom) {
-                svg.transition().call(zoom.scaleBy, 1.5);
-            }
+            svg.transition().call(zoom.scaleBy, 1.5);
         });
         
         document.getElementById('zoomOutBtn').addEventListener('click', () => {
-            if (svg && zoom) {
-                svg.transition().call(zoom.scaleBy, 1 / 1.5);
-            }
+            svg.transition().call(zoom.scaleBy, 1 / 1.5);
         });
         
         document.getElementById('resetZoomBtn').addEventListener('click', () => {
-            if (svg && zoom) {
-                svg.transition().call(zoom.transform, d3.zoomIdentity);
-            }
+            svg.transition().call(zoom.transform, d3.zoomIdentity);
         });
         
         // Инициализация при загрузке страницы
         window.addEventListener('load', () => {
-            // Ждем загрузки D3
             if (typeof d3 !== 'undefined') {
                 initVisualization();
             } else {
-                // Если D3 не загружен, ждем еще немного
-                setTimeout(() => {
-                    if (typeof d3 !== 'undefined') {
-                        initVisualization();
-                    } else {
-                        showError('Не удалось загрузить библиотеку D3.js');
-                    }
-                }, 1000);
+                console.error('D3.js не загружен');
+                document.querySelector('.visualization-container').innerHTML = 
+                    '<div class="error-container"><h2>Ошибка загрузки D3.js</h2><p>Не удалось загрузить библиотеку D3.js</p></div>';
             }
         });
         
         // Обработка изменения размера окна
         window.addEventListener('resize', () => {
-            if (svg && svg.node()) {
+            if (simulation && svg && svg.node()) {
                 try {
-                    clearAnimations(); // Очищаем анимации при изменении размера
-                    
-                    // Простое обновление позиций при изменении размера
-                    const centerX = svg.node().clientWidth / 2;
-                    const centerY = svg.node().clientHeight / 2;
-                    
-                    // Обновляем позиции узлов относительно нового центра
-                    g.selectAll('.node').each(function(d) {
-                        if (d && d.x && d.y) {
-                            const newX = d.x + (centerX - d.x) * 0.1;
-                            const newY = d.y + (centerY - d.y) * 0.1;
-                            d.x = newX;
-                            d.y = newY;
-                            d3.select(this).attr('transform', `translate(${newX - config.nodeWidth/2}, ${newY - config.nodeHeight/2})`);
-                        }
-                    });
+                    simulation.force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
+                    simulation.alpha(0.3).restart();
                 } catch (error) {
                     console.error('Ошибка при изменении размера окна:', error);
                 }
             }
-        });
-        
-        // Очистка анимаций при закрытии страницы
-        window.addEventListener('beforeunload', () => {
-            clearAnimations();
         });
     </script>
 </body>
