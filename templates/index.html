@@ -352,37 +352,56 @@
             console.log('Фильтрация с параметрами:', currentFilters);
             console.log('Всего блоков до фильтрации:', blocks.length);
             
-            const filtered = blocks.filter(block => {
+            const filtered = blocks.map(block => {
+                // Фильтруем VirtualHost по имени
                 if (currentFilters.virtualHost && block.virtualHost.name !== currentFilters.virtualHost) {
                     console.log('Блок отфильтрован по VirtualHost:', block.virtualHost.name, '!=', currentFilters.virtualHost);
-                    return false;
+                    return null;
                 }
                 
-                if (currentFilters.exchange) {
-                    const hasMatchingExchange = block.exchanges.some(exchange => 
-                        exchange.exchange.name === currentFilters.exchange
-                    );
-                    if (!hasMatchingExchange) return false;
-                }
+                // Фильтруем exchanges внутри блока
+                const filteredExchanges = block.exchanges.filter(exchange => {
+                    // Фильтр по exchange
+                    if (currentFilters.exchange && exchange.exchange.name !== currentFilters.exchange) {
+                        return false;
+                    }
+                    
+                    // Фильтруем routes внутри exchange
+                    const filteredRoutes = exchange.routes.filter(route => {
+                        // Фильтр по route
+                        if (currentFilters.route && route.name !== currentFilters.route) {
+                            return false;
+                        }
+                        
+                        // Фильтруем queues внутри route
+                        const filteredQueues = route.queues.filter(queue => {
+                            // Фильтр по queue
+                            if (currentFilters.queue && queue.name !== currentFilters.queue) {
+                                return false;
+                            }
+                            return true;
+                        });
+                        
+                        // Обновляем queues в route
+                        route.queues = filteredQueues;
+                        
+                        // Возвращаем route только если в нем есть очереди после фильтрации
+                        return filteredQueues.length > 0;
+                    });
+                    
+                    // Обновляем routes в exchange
+                    exchange.routes = filteredRoutes;
+                    
+                    // Возвращаем exchange только если в нем есть routes после фильтрации
+                    return filteredRoutes.length > 0;
+                });
                 
-                if (currentFilters.route) {
-                    const hasMatchingRoute = block.exchanges.some(exchange =>
-                        exchange.routes.some(route => route.name === currentFilters.route)
-                    );
-                    if (!hasMatchingRoute) return false;
-                }
+                // Обновляем exchanges в блоке
+                block.exchanges = filteredExchanges;
                 
-                if (currentFilters.queue) {
-                    const hasMatchingQueue = block.exchanges.some(exchange =>
-                        exchange.routes.some(route =>
-                            route.queues.some(queue => queue.name === currentFilters.queue)
-                        )
-                    );
-                    if (!hasMatchingQueue) return false;
-                }
-                
-                return true;
-            });
+                // Возвращаем блок только если в нем есть exchanges после фильтрации
+                return filteredExchanges.length > 0 ? block : null;
+            }).filter(block => block !== null);
             
             console.log('Блоков после фильтрации:', filtered.length);
             return filtered;
