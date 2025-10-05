@@ -212,7 +212,6 @@
                 svg.call(zoom);
                 
                 updateVisualization();
-                setupFilters();
             } catch (error) {
                 console.error('Ошибка инициализации:', error);
                 document.querySelector('.visualization-container').innerHTML = 
@@ -248,12 +247,17 @@
                 
                 // Создаем структуру данных
                 const virtualHostBlocks = createVirtualHostBlocks(exchanges, queues, bindings);
+                console.log('Создано блоков VirtualHost:', virtualHostBlocks.length);
                 
                 // Фильтруем данные
                 const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
+                console.log('После фильтрации блоков:', filteredBlocks.length);
                 
                 // Рисуем блоки
                 drawVirtualHostBlocks(filteredBlocks);
+                
+                // Настраиваем фильтры после обновления данных
+                setupFilters();
                 
             } catch (error) {
                 console.error('Ошибка обновления визуализации:', error);
@@ -386,6 +390,7 @@
         // Рисование блоков VirtualHost
         function drawVirtualHostBlocks(blocks) {
             try {
+                console.log('Рисуем блоки VirtualHost:', blocks.length);
                 const virtualHostGroups = g.append('g')
                     .attr('class', 'virtualhost-blocks')
                     .selectAll('g')
@@ -619,8 +624,19 @@
             const queues = topology.queues || [];
             const bindings = topology.bindings || [];
             
-            // Заполняем фильтр VirtualHost
+            // Очищаем фильтры
             const virtualHostFilter = document.getElementById('virtualHostFilter');
+            const exchangeFilter = document.getElementById('exchangeFilter');
+            const routeFilter = document.getElementById('routeFilter');
+            const queueFilter = document.getElementById('queueFilter');
+            
+            // Очищаем опции
+            virtualHostFilter.innerHTML = '<option value="">Все VirtualHost</option>';
+            exchangeFilter.innerHTML = '<option value="">Все Exchanges</option>';
+            routeFilter.innerHTML = '<option value="">Все RoutingKey</option>';
+            queueFilter.innerHTML = '<option value="">Все очереди</option>';
+            
+            // Заполняем фильтр VirtualHost
             const virtualHosts = new Set();
             exchanges.forEach(exchange => {
                 virtualHosts.add(exchange.vhost || '/');
