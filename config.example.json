@@ -1,0 +1,25 @@
+{
+  "rabbitmq": {
+    "host": "localhost",
+    "port": 5672,
+    "username": "guest",
+    "password": "guest",
+    "vhost": "/",
+    "management_port": 15672
+  },
+  "app": {
+    "title": "RabbitMQ ERD Visualizer",
+    "description": "Визуализация топологии RabbitMQ в виде блок-схем",
+    "version": "1.0.0"
+  },
+  "visualization": {
+    "node_width": 200,
+    "node_height": 100,
+    "spacing": 150,
+    "colors": {
+      "exchange": "#4CAF50",
+      "queue": "#2196F3",
+      "connection": "#FF9800"
+    }
+  }
+}

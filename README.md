@@ -27,19 +27,24 @@
 pip install -r requirements.txt
 ```
 
-3. Настройте подключение к RabbitMQ в файле `config.json`:
-```json
-{
-  "rabbitmq": {
-    "host": "localhost",
-    "port": 5672,
-    "username": "guest",
-    "password": "guest",
-    "vhost": "/",
-    "management_port": 15672
-  }
-}
-```
+3. Настройте подключение к RabbitMQ:
+   - Скопируйте `config.example.json` в `config.json`:
+   ```bash
+   cp config.example.json config.json
+   ```
+   - Отредактируйте `config.json` под ваши настройки RabbitMQ:
+   ```json
+   {
+     "rabbitmq": {
+       "host": "localhost",
+       "port": 5672,
+       "username": "guest",
+       "password": "guest",
+       "vhost": "/",
+       "management_port": 15672
+     }
+   }
+   ```
 
 ## Запуск
 
@@ -132,6 +137,14 @@ rabbitmq-plugins list
 ## Лицензия
 
 MIT License
+
+## Безопасность
+
+⚠️ **Важно**: Файл `config.json` содержит чувствительные данные (пароли, хосты) и исключен из Git репозитория. 
+
+- Используйте `config.example.json` как шаблон
+- Никогда не коммитьте реальные учетные данные
+- Для продакшена используйте переменные окружения или внешние системы конфигурации
 
 ## Поддержка
 
