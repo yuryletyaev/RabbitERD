@@ -325,12 +325,9 @@
                         };
                     });
                     
-                    // Находим максимальное количество очередей в роутах этого exchange
-                    const maxQueuesInExchange = Math.max(...routeList.map(route => route.queueCount), 1);
-                    
-                    // Добавляем информацию о максимальном количестве очередей к каждому роуту
+                    // Для каждого роута устанавливаем максимальное количество очередей в этом роуте
                     routeList.forEach(route => {
-                        route.maxQueuesInExchange = maxQueuesInExchange;
+                        route.maxQueuesInRoute = route.queueCount; // Максимум очередей в этом конкретном роуте
                     });
                     
                     return {
@@ -350,8 +347,10 @@
         
         // Фильтрация блоков VirtualHost
         function filterVirtualHostBlocks(blocks) {
-            return blocks.filter(block => {
+            console.log('Фильтрация блоков с фильтрами:', currentFilters);
+            const filtered = blocks.filter(block => {
                 if (currentFilters.virtualHost && block.virtualHost.name !== currentFilters.virtualHost) {
+                    console.log('Блок отфильтрован по VirtualHost:', block.virtualHost.name);
                     return false;
                 }
                 
@@ -380,6 +379,8 @@
                 
                 return true;
             });
+            console.log('Результат фильтрации:', filtered.length, 'из', blocks.length, 'блоков');
+            return filtered;
         }
         
         // Рисование блоков VirtualHost
@@ -537,7 +538,7 @@
                                     .attr('transform', `translate(20, ${queueY})`);
                                 
                                 // Рассчитываем цвет на основе количества очередей в роуте
-                                const queueColor = getQueueColor(route.queueCount, route.maxQueuesInExchange);
+                                const queueColor = getQueueColor(route.queueCount, route.maxQueuesInRoute);
                                 
                                 queueGroup.append('rect')
                                     .attr('width', exchangeWidth - 40)
@@ -585,7 +586,8 @@
             }
             
             // Рассчитываем интенсивность от 0.3 (светлый) до 1.0 (темный)
-            const intensity = 0.3 + (0.7 * (queueCount - 1) / (maxQueuesInRoute - 1));
+            // queueCount всегда равен maxQueuesInRoute для одного роута, поэтому используем фиксированную интенсивность
+            const intensity = 0.3 + (0.7 * Math.min(queueCount / 5, 1)); // Максимум при 5+ очередях
             
             // Конвертируем в RGB
             const blue = Math.floor(243 * intensity);
@@ -669,21 +671,25 @@
             // Обработчики фильтров
             virtualHostFilter.addEventListener('change', (e) => {
                 currentFilters.virtualHost = e.target.value;
+                console.log('Фильтр VirtualHost изменен:', e.target.value);
                 updateVisualization();
             });
             
             exchangeFilter.addEventListener('change', (e) => {
                 currentFilters.exchange = e.target.value;
+                console.log('Фильтр Exchange изменен:', e.target.value);
                 updateVisualization();
             });
             
             routeFilter.addEventListener('change', (e) => {
                 currentFilters.route = e.target.value;
+                console.log('Фильтр Route изменен:', e.target.value);
                 updateVisualization();
             });
             
             queueFilter.addEventListener('change', (e) => {
                 currentFilters.queue = e.target.value;
+                console.log('Фильтр Queue изменен:', e.target.value);
                 updateVisualization();
             });
         }
