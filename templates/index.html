@@ -280,86 +280,98 @@
         
         // Рисование блоков обменов
         function drawExchangeBlocks(blocks) {
-            const blockGroups = g.append('g')
-                .attr('class', 'exchange-blocks')
-                .selectAll('g')
-                .data(blocks)
-                .enter().append('g')
-                .attr('class', 'exchange-block')
-                .attr('transform', d => `translate(${d.x}, ${d.y})`);
-            
-            // Рисуем основной блок обмена
-            blockGroups.append('rect')
-                .attr('width', config.blockWidth)
-                .attr('height', config.blockHeight)
-                .attr('rx', 10)
-                .attr('fill', config.colors.exchange)
-                .attr('stroke', '#333')
-                .attr('stroke-width', 2);
-            
-            // Заголовок обмена
-            blockGroups.append('text')
-                .attr('x', config.blockWidth / 2)
-                .attr('y', 25)
-                .attr('text-anchor', 'middle')
-                .attr('fill', '#333')
-                .attr('font-weight', 'bold')
-                .attr('font-size', '14px')
-                .text(`Exchange: ${d.exchange.name}`);
-            
-            // Рисуем роуты
-            let routeY = 50;
-            blocks.forEach(block => {
-                block.routes.forEach((route, routeIndex) => {
-                    const routeGroup = blockGroups.filter(d => d === block)
-                        .append('g')
-                        .attr('class', 'route')
-                        .attr('transform', `translate(10, ${routeY})`);
-                    
-                    // Роут
-                    routeGroup.append('rect')
-                        .attr('width', config.blockWidth - 20)
-                        .attr('height', config.routeHeight)
-                        .attr('rx', 5)
-                        .attr('fill', config.colors.route)
-                        .attr('stroke', '#333')
-                        .attr('stroke-width', 1);
-                    
-                    routeGroup.append('text')
-                        .attr('x', 10)
-                        .attr('y', 20)
-                        .attr('fill', 'white')
-                        .attr('font-size', '12px')
-                        .text(`RoutingKey: ${route.name}`);
-                    
-                    // Очереди
-                    let queueY = 45;
-                    route.queues.forEach((queue, queueIndex) => {
-                        const queueGroup = routeGroup.append('g')
-                            .attr('class', 'queue')
-                            .attr('transform', `translate(20, ${queueY})`);
+            try {
+                const blockGroups = g.append('g')
+                    .attr('class', 'exchange-blocks')
+                    .selectAll('g')
+                    .data(blocks)
+                    .enter().append('g')
+                    .attr('class', 'exchange-block')
+                    .attr('transform', d => `translate(${d.x}, ${d.y})`);
+                
+                // Рисуем основной блок обмена
+                blockGroups.append('rect')
+                    .attr('width', config.blockWidth)
+                    .attr('height', config.blockHeight)
+                    .attr('rx', 10)
+                    .attr('fill', config.colors.exchange)
+                    .attr('stroke', '#333')
+                    .attr('stroke-width', 2);
+                
+                // Заголовок обмена
+                blockGroups.append('text')
+                    .attr('x', config.blockWidth / 2)
+                    .attr('y', 25)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', '#333')
+                    .attr('font-weight', 'bold')
+                    .attr('font-size', '14px')
+                    .text(d => `Exchange: ${d.exchange.name}`);
+                
+                // Рисуем роуты
+                let routeY = 50;
+                blocks.forEach(block => {
+                    block.routes.forEach((route, routeIndex) => {
+                        const routeGroup = blockGroups.filter(d => d === block)
+                            .append('g')
+                            .attr('class', 'route')
+                            .attr('transform', `translate(10, ${routeY})`);
                         
-                        queueGroup.append('rect')
-                            .attr('width', config.blockWidth - 40)
-                            .attr('height', config.queueHeight)
-                            .attr('rx', 3)
-                            .attr('fill', config.colors.queue)
+                        // Роут
+                        routeGroup.append('rect')
+                            .attr('width', config.blockWidth - 20)
+                            .attr('height', config.routeHeight)
+                            .attr('rx', 5)
+                            .attr('fill', config.colors.route)
                             .attr('stroke', '#333')
                             .attr('stroke-width', 1);
                         
-                        queueGroup.append('text')
+                        routeGroup.append('text')
                             .attr('x', 10)
-                            .attr('y', 18)
+                            .attr('y', 20)
                             .attr('fill', 'white')
-                            .attr('font-size', '10px')
-                            .text(queue.name);
+                            .attr('font-size', '12px')
+                            .text(`RoutingKey: ${route.name}`);
                         
-                        queueY += 35;
+                        // Очереди
+                        let queueY = 45;
+                        route.queues.forEach((queue, queueIndex) => {
+                            const queueGroup = routeGroup.append('g')
+                                .attr('class', 'queue')
+                                .attr('transform', `translate(20, ${queueY})`);
+                            
+                            queueGroup.append('rect')
+                                .attr('width', config.blockWidth - 40)
+                                .attr('height', config.queueHeight)
+                                .attr('rx', 3)
+                                .attr('fill', config.colors.queue)
+                                .attr('stroke', '#333')
+                                .attr('stroke-width', 1);
+                            
+                            queueGroup.append('text')
+                                .attr('x', 10)
+                                .attr('y', 18)
+                                .attr('fill', 'white')
+                                .attr('font-size', '10px')
+                                .text(queue.name);
+                            
+                            queueY += 35;
+                        });
+                        
+                        routeY += 50 + (route.queues.length * 35);
                     });
-                    
-                    routeY += 50 + (route.queues.length * 35);
                 });
-            });
+            } catch (error) {
+                console.error('Ошибка рисования блоков:', error);
+                g.append('text')
+                    .attr('x', '50%')
+                    .attr('y', '50%')
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '0.35em')
+                    .attr('font-size', '16px')
+                    .attr('fill', '#ff0000')
+                    .text('Ошибка отображения блоков');
+            }
         }
         
         // Настройка фильтров
