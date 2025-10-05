@@ -89,6 +89,12 @@
             </div>
             <div class="filters">
                 <div class="filter-group">
+                    <label>Фильтр по VirtualHost:</label>
+                    <select id="virtualHostFilter">
+                        <option value="">Все VirtualHost</option>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label>Фильтр по Exchanges:</label>
                     <select id="exchangeFilter">
                         <option value="">Все Exchanges</option>
@@ -125,11 +131,14 @@
         
         // Конфигурация
         const config = {
+            virtualHostWidth: 400,
+            virtualHostHeight: 400,
             blockWidth: 300,
-            blockHeight: 300, // Увеличиваем высоту блока
+            blockHeight: 300,
             routeHeight: 35,
             queueHeight: 25,
             colors: {
+                virtualHost: '#9C27B0',
                 exchange: 'transparent',
                 route: '#FF9800',
                 queue: '#2196F3',
@@ -140,6 +149,7 @@
         // Глобальные переменные
         let svg, g, zoom;
         let currentFilters = {
+            virtualHost: '',
             exchange: '',
             route: '',
             queue: ''
@@ -195,13 +205,13 @@
                 }
                 
                 // Создаем структуру данных
-                const exchangeBlocks = createExchangeBlocks(exchanges, queues, bindings);
+                const virtualHostBlocks = createVirtualHostBlocks(exchanges, queues, bindings);
                 
                 // Фильтруем данные
-                const filteredBlocks = filterBlocks(exchangeBlocks);
+                const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
                 
                 // Рисуем блоки
-                drawExchangeBlocks(filteredBlocks);
+                drawVirtualHostBlocks(filteredBlocks);
                 
             } catch (error) {
                 console.error('Ошибка обновления визуализации:', error);
@@ -210,66 +220,109 @@
             }
         }
         
-        // Создание блоков обменов
-        function createExchangeBlocks(exchanges, queues, bindings) {
-            return exchanges.map((exchange, index) => {
-                // Находим связанные очереди через bindings
-                const relatedBindings = bindings.filter(binding => 
-                    binding.source === exchange.name || binding.destination === exchange.name
-                );
-                
-                // Группируем по роутам (routing_key)
-                const routes = {};
-                relatedBindings.forEach(binding => {
-                    const routeKey = binding.routing_key || 'default';
-                    if (!routes[routeKey]) {
-                        routes[routeKey] = [];
-                    }
-                    routes[routeKey].push(binding);
-                });
-                
-                // Создаем структуру роутов
-                const routeList = Object.keys(routes).map(routeKey => {
-                    const routeBindings = routes[routeKey];
-                    const routeQueues = routeBindings.map(binding => {
-                        const queueName = binding.destination === exchange.name ? 
-                            binding.source : binding.destination;
-                        return queues.find(q => q.name === queueName);
-                    }).filter(q => q);
+        // Создание блоков VirtualHost
+        function createVirtualHostBlocks(exchanges, queues, bindings) {
+            // Группируем по VirtualHost
+            const virtualHosts = {};
+            
+            // Добавляем exchanges в VirtualHost
+            exchanges.forEach(exchange => {
+                const vhost = exchange.vhost || '/';
+                if (!virtualHosts[vhost]) {
+                    virtualHosts[vhost] = {
+                        name: vhost,
+                        exchanges: []
+                    };
+                }
+                virtualHosts[vhost].exchanges.push(exchange);
+            });
+            
+            // Добавляем queues в VirtualHost
+            queues.forEach(queue => {
+                const vhost = queue.vhost || '/';
+                if (!virtualHosts[vhost]) {
+                    virtualHosts[vhost] = {
+                        name: vhost,
+                        exchanges: []
+                    };
+                }
+            });
+            
+            // Создаем структуру для каждого VirtualHost
+            return Object.values(virtualHosts).map((vhost, index) => {
+                const vhostExchanges = vhost.exchanges.map(exchange => {
+                    // Находим связанные очереди через bindings
+                    const relatedBindings = bindings.filter(binding => 
+                        binding.source === exchange.name || binding.destination === exchange.name
+                    );
+                    
+                    // Группируем по роутам (routing_key)
+                    const routes = {};
+                    relatedBindings.forEach(binding => {
+                        const routeKey = binding.routing_key || 'default';
+                        if (!routes[routeKey]) {
+                            routes[routeKey] = [];
+                        }
+                        routes[routeKey].push(binding);
+                    });
+                    
+                    // Создаем структуру роутов
+                    const routeList = Object.keys(routes).map(routeKey => {
+                        const routeBindings = routes[routeKey];
+                        const routeQueues = routeBindings.map(binding => {
+                            const queueName = binding.destination === exchange.name ? 
+                                binding.source : binding.destination;
+                            return queues.find(q => q.name === queueName);
+                        }).filter(q => q);
+                        
+                        return {
+                            name: routeKey,
+                            queues: routeQueues,
+                            bindings: routeBindings
+                        };
+                    });
                     
                     return {
-                        name: routeKey,
-                        queues: routeQueues,
-                        bindings: routeBindings
+                        exchange: exchange,
+                        routes: routeList
                     };
                 });
                 
                 return {
-                    exchange: exchange,
-                    routes: routeList,
-                    x: 50 + index * 350,
+                    virtualHost: vhost,
+                    exchanges: vhostExchanges,
+                    x: 50 + index * 450,
                     y: 50
                 };
             });
         }
         
-        // Фильтрация блоков
-        function filterBlocks(blocks) {
+        // Фильтрация блоков VirtualHost
+        function filterVirtualHostBlocks(blocks) {
             return blocks.filter(block => {
-                if (currentFilters.exchange && block.exchange.name !== currentFilters.exchange) {
+                if (currentFilters.virtualHost && block.virtualHost.name !== currentFilters.virtualHost) {
                     return false;
                 }
                 
+                if (currentFilters.exchange) {
+                    const hasMatchingExchange = block.exchanges.some(exchange => 
+                        exchange.exchange.name === currentFilters.exchange
+                    );
+                    if (!hasMatchingExchange) return false;
+                }
+                
                 if (currentFilters.route) {
-                    const hasMatchingRoute = block.routes.some(route => 
-                        route.name === currentFilters.route
+                    const hasMatchingRoute = block.exchanges.some(exchange =>
+                        exchange.routes.some(route => route.name === currentFilters.route)
                     );
                     if (!hasMatchingRoute) return false;
                 }
                 
                 if (currentFilters.queue) {
-                    const hasMatchingQueue = block.routes.some(route =>
-                        route.queues.some(queue => queue.name === currentFilters.queue)
+                    const hasMatchingQueue = block.exchanges.some(exchange =>
+                        exchange.routes.some(route =>
+                            route.queues.some(queue => queue.name === currentFilters.queue)
+                        )
                     );
                     if (!hasMatchingQueue) return false;
                 }
@@ -278,89 +331,117 @@
             });
         }
         
-        // Рисование блоков обменов
-        function drawExchangeBlocks(blocks) {
+        // Рисование блоков VirtualHost
+        function drawVirtualHostBlocks(blocks) {
             try {
-                const blockGroups = g.append('g')
-                    .attr('class', 'exchange-blocks')
+                const virtualHostGroups = g.append('g')
+                    .attr('class', 'virtualhost-blocks')
                     .selectAll('g')
                     .data(blocks)
                     .enter().append('g')
-                    .attr('class', 'exchange-block')
+                    .attr('class', 'virtualhost-block')
                     .attr('transform', d => `translate(${d.x}, ${d.y})`);
                 
-                // Рисуем основной блок обмена
-                blockGroups.append('rect')
-                    .attr('width', config.blockWidth)
-                    .attr('height', config.blockHeight)
-                    .attr('rx', 10)
-                    .attr('fill', config.colors.exchange)
+                // Рисуем основной блок VirtualHost
+                virtualHostGroups.append('rect')
+                    .attr('width', config.virtualHostWidth)
+                    .attr('height', config.virtualHostHeight)
+                    .attr('rx', 15)
+                    .attr('fill', config.colors.virtualHost)
                     .attr('stroke', '#333')
-                    .attr('stroke-width', 2);
+                    .attr('stroke-width', 3);
                 
-                // Заголовок обмена
-                blockGroups.append('text')
-                    .attr('x', config.blockWidth / 2)
-                    .attr('y', 25)
+                // Заголовок VirtualHost
+                virtualHostGroups.append('text')
+                    .attr('x', config.virtualHostWidth / 2)
+                    .attr('y', 30)
                     .attr('text-anchor', 'middle')
-                    .attr('fill', '#333')
+                    .attr('fill', 'white')
                     .attr('font-weight', 'bold')
-                    .attr('font-size', '14px')
-                    .text(d => `Exchange: ${d.exchange.name}`);
+                    .attr('font-size', '16px')
+                    .text(d => `VirtualHost: ${d.virtualHost.name}`);
                 
-                // Рисуем роуты для каждого блока отдельно
+                // Рисуем exchanges для каждого VirtualHost
                 blocks.forEach((block, blockIndex) => {
-                    let routeY = 50;
+                    let exchangeY = 60;
                     
-                    block.routes.forEach((route, routeIndex) => {
-                        const routeGroup = blockGroups.filter(d => d === block)
+                    block.exchanges.forEach((exchangeData, exchangeIndex) => {
+                        const exchangeGroup = virtualHostGroups.filter(d => d === block)
                             .append('g')
-                            .attr('class', 'route')
-                            .attr('transform', `translate(10, ${routeY})`);
+                            .attr('class', 'exchange')
+                            .attr('transform', `translate(20, ${exchangeY})`);
                         
-                        // Роут
-                        routeGroup.append('rect')
-                            .attr('width', config.blockWidth - 20)
-                            .attr('height', config.routeHeight)
-                            .attr('rx', 5)
-                            .attr('fill', config.colors.route)
+                        // Exchange
+                        exchangeGroup.append('rect')
+                            .attr('width', config.virtualHostWidth - 40)
+                            .attr('height', config.blockHeight)
+                            .attr('rx', 10)
+                            .attr('fill', config.colors.exchange)
                             .attr('stroke', '#333')
-                            .attr('stroke-width', 1);
+                            .attr('stroke-width', 2);
                         
-                        routeGroup.append('text')
+                        exchangeGroup.append('text')
                             .attr('x', 10)
-                            .attr('y', 20)
-                            .attr('fill', 'white')
-                            .attr('font-size', '12px')
-                            .text(`RoutingKey: ${route.name}`);
+                            .attr('y', 25)
+                            .attr('fill', '#333')
+                            .attr('font-weight', 'bold')
+                            .attr('font-size', '14px')
+                            .text(`Exchange: ${exchangeData.exchange.name}`);
                         
-                        // Очереди
-                        let queueY = 40;
-                        route.queues.forEach((queue, queueIndex) => {
-                            const queueGroup = routeGroup.append('g')
-                                .attr('class', 'queue')
-                                .attr('transform', `translate(20, ${queueY})`);
+                        // Рисуем роуты для каждого exchange
+                        let routeY = 50;
+                        exchangeData.routes.forEach((route, routeIndex) => {
+                            const routeGroup = exchangeGroup.append('g')
+                                .attr('class', 'route')
+                                .attr('transform', `translate(10, ${routeY})`);
                             
-                            queueGroup.append('rect')
-                                .attr('width', config.blockWidth - 40)
-                                .attr('height', config.queueHeight)
-                                .attr('rx', 3)
-                                .attr('fill', config.colors.queue)
+                            // Роут
+                            routeGroup.append('rect')
+                                .attr('width', config.virtualHostWidth - 60)
+                                .attr('height', config.routeHeight)
+                                .attr('rx', 5)
+                                .attr('fill', config.colors.route)
                                 .attr('stroke', '#333')
                                 .attr('stroke-width', 1);
                             
-                            queueGroup.append('text')
+                            routeGroup.append('text')
                                 .attr('x', 10)
-                                .attr('y', 16)
+                                .attr('y', 20)
                                 .attr('fill', 'white')
-                                .attr('font-size', '10px')
-                                .text(queue.name);
+                                .attr('font-size', '12px')
+                                .text(`RoutingKey: ${route.name}`);
                             
-                            queueY += 30;
+                            // Очереди
+                            let queueY = 40;
+                            route.queues.forEach((queue, queueIndex) => {
+                                const queueGroup = routeGroup.append('g')
+                                    .attr('class', 'queue')
+                                    .attr('transform', `translate(20, ${queueY})`);
+                                
+                                queueGroup.append('rect')
+                                    .attr('width', config.virtualHostWidth - 80)
+                                    .attr('height', config.queueHeight)
+                                    .attr('rx', 3)
+                                    .attr('fill', config.colors.queue)
+                                    .attr('stroke', '#333')
+                                    .attr('stroke-width', 1);
+                                
+                                queueGroup.append('text')
+                                    .attr('x', 10)
+                                    .attr('y', 16)
+                                    .attr('fill', 'white')
+                                    .attr('font-size', '10px')
+                                    .text(queue.name);
+                                
+                                queueY += 30;
+                            });
+                            
+                            // Переходим к следующему роуту
+                            routeY += 40 + (route.queues.length * 30);
                         });
                         
-                        // Переходим к следующему роуту
-                        routeY += 40 + (route.queues.length * 30);
+                        // Переходим к следующему exchange
+                        exchangeY += 50 + (exchangeData.routes.length * 40);
                     });
                 });
             } catch (error) {
@@ -381,6 +462,22 @@
             const exchanges = topology.exchanges || [];
             const queues = topology.queues || [];
             const bindings = topology.bindings || [];
+            
+            // Заполняем фильтр VirtualHost
+            const virtualHostFilter = document.getElementById('virtualHostFilter');
+            const virtualHosts = new Set();
+            exchanges.forEach(exchange => {
+                virtualHosts.add(exchange.vhost || '/');
+            });
+            queues.forEach(queue => {
+                virtualHosts.add(queue.vhost || '/');
+            });
+            virtualHosts.forEach(vhost => {
+                const option = document.createElement('option');
+                option.value = vhost;
+                option.textContent = vhost;
+                virtualHostFilter.appendChild(option);
+            });
             
             // Заполняем фильтр обменов
             const exchangeFilter = document.getElementById('exchangeFilter');
@@ -416,6 +513,11 @@
             });
             
             // Обработчики фильтров
+            virtualHostFilter.addEventListener('change', (e) => {
+                currentFilters.virtualHost = e.target.value;
+                updateVisualization();
+            });
+            
             exchangeFilter.addEventListener('change', (e) => {
                 currentFilters.exchange = e.target.value;
                 updateVisualization();
