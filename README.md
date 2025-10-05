@@ -55,18 +55,30 @@ python test_app.py
 ```
 
 ### Запуск приложения
+
+#### Способ 1: Прямой запуск
 ```bash
-python main.py
+python3 main.py
 ```
 
-Или с помощью uvicorn:
+#### Способ 2: С uvicorn
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Или используйте удобный скрипт:
+#### Способ 3: Удобные скрипты
 ```bash
-python run.py
+python3 run.py
+```
+
+Или если есть проблемы с uvicorn:
+```bash
+python3 run_simple.py
+```
+
+#### Способ 4: Базовый скрипт с проверками
+```bash
+python3 run_basic.py
 ```
 
 После запуска откройте браузер и перейдите по адресу: http://localhost:8000
@@ -134,6 +146,12 @@ RabbitERD/
 - Убедитесь, что D3.js загружается (проверьте подключение к интернету)
 - Приложение автоматически попробует альтернативный CDN
 - Проверьте, что RabbitMQ Management API доступен
+
+### Ошибка "No module named 'uvicorn'"
+- Установите uvicorn: `pip3 install uvicorn`
+- Или установите все зависимости: `pip3 install -r requirements.txt`
+- Используйте прямой запуск: `python3 main.py`
+- Или используйте скрипт с проверками: `python3 run_basic.py`
 
 ### Включение Management Plugin
 ```bash
