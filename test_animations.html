@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест исправленных анимаций</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #diagram { width: 100%; height: 400px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Тест исправленных анимаций</h1>
+    <div id="status"></div>
+    <div id="animation-count">Активных анимаций: 0</div>
+    <svg id="diagram" width="100%" height="400"></svg>
+    <button onclick="testAnimations()">Тест анимаций</button>
+    <button onclick="clearAllAnimations()">Очистить анимации</button>
+    
+    <script>
+        let animationTimeouts = [];
+        const MAX_ANIMATIONS = 10;
+        
+        function addAnimation(callback, delay = 0) {
+            if (animationTimeouts.length >= MAX_ANIMATIONS) {
+                console.warn('Превышено максимальное количество анимаций');
+                return;
+            }
+            
+            const timeout = setTimeout(callback, delay);
+            animationTimeouts.push(timeout);
+            updateAnimationCount();
+            return timeout;
+        }
+        
+        function clearAnimations() {
+            animationTimeouts.forEach(timeout => clearTimeout(timeout));
+            animationTimeouts = [];
+            updateAnimationCount();
+        }
+        
+        function updateAnimationCount() {
+            document.getElementById('animation-count').textContent = 
+                `Активных анимаций: ${animationTimeouts.length}`;
+        }
+        
+        function clearAllAnimations() {
+            clearAnimations();
+            document.getElementById('status').innerHTML = '<p class="info">Все анимации очищены</p>';
+        }
+        
+        function testAnimations() {
+            const status = document.getElementById('status');
+            status.innerHTML = '<p class="info">Запуск тестовых анимаций...</p>';
+            
+            // Тест 1: Простая анимация
+            addAnimation(() => {
+                status.innerHTML += '<p class="success">✅ Анимация 1 выполнена</p>';
+            }, 1000);
+            
+            // Тест 2: Множественные анимации
+            for (let i = 0; i < 5; i++) {
+                addAnimation(() => {
+                    status.innerHTML += `<p class="success">✅ Анимация ${i + 2} выполнена</p>`;
+                }, (i + 1) * 500);
+            }
+            
+            // Тест 3: Превышение лимита
+            for (let i = 0; i < 15; i++) {
+                addAnimation(() => {
+                    status.innerHTML += `<p class="error">❌ Анимация ${i + 7} (превышение лимита)</p>`;
+                }, 100);
+            }
+        }
+        
+        // Очистка при закрытии страницы
+        window.addEventListener('beforeunload', () => {
+            clearAnimations();
+        });
+        
+        // Инициализация
+        updateAnimationCount();
+    </script>
+</body>
+</html>

@@ -20,6 +20,8 @@
                 console.error('Не удалось загрузить D3.js с альтернативного CDN');
                 showError('Не удалось загрузить библиотеку D3.js. Проверьте подключение к интернету.');
             };
+
+            
             document.head.appendChild(script);
         }
     </script>
@@ -94,6 +96,8 @@
         
         let svg, g, zoom;
         let simulation;
+        let animationTimeouts = []; // Для отслеживания анимаций
+        const MAX_ANIMATIONS = 10; // Максимальное количество одновременных анимаций
         
         // Проверка доступности D3
         if (typeof d3 === 'undefined') {
@@ -141,8 +145,27 @@
             }
         }
         
+        // Функция очистки анимаций
+        function clearAnimations() {
+            animationTimeouts.forEach(timeout => clearTimeout(timeout));
+            animationTimeouts = [];
+        }
+        
+        // Функция добавления анимации с ограничением
+        function addAnimation(callback, delay = 0) {
+            if (animationTimeouts.length >= MAX_ANIMATIONS) {
+                console.warn('Превышено максимальное количество анимаций');
+                return;
+            }
+            
+            const timeout = setTimeout(callback, delay);
+            animationTimeouts.push(timeout);
+            return timeout;
+        }
+        
         // Функция показа ошибок
         function showError(message) {
+            clearAnimations(); // Останавливаем все анимации
             const container = document.querySelector('.visualization-container');
             if (container) {
                 container.innerHTML = `
@@ -159,6 +182,9 @@
         // Обновление визуализации
         function updateVisualization() {
             try {
+                // Очищаем предыдущие анимации
+                clearAnimations();
+                
                 // Проверка данных
                 if (!topology) {
                     throw new Error('Данные топологии не загружены');
@@ -305,18 +331,22 @@
                     node.y = centerY + (row - 1) * spacing;
                 });
                 
-                // Позиционирование узлов с анимацией
+                // Позиционирование узлов с контролируемой анимацией
                 node.attr('transform', d => {
                     const x = d.x || 0;
                     const y = d.y || 0;
                     return `translate(${x - config.nodeWidth/2}, ${y - config.nodeHeight/2})`;
                 })
-                .style('opacity', 0)
-                .transition()
-                .duration(500)
-                .style('opacity', 1);
+                .style('opacity', 0);
                 
-                // Позиционирование связей с анимацией
+                // Анимация появления с задержкой
+                addAnimation(() => {
+                    node.transition()
+                        .duration(500)
+                        .style('opacity', 1);
+                }, 100);
+                
+                // Позиционирование связей с контролируемой анимацией
                 link
                     .attr('x1', d => {
                         const source = nodes.find(n => n.id === d.from.id);
@@ -334,11 +364,14 @@
                         const dest = nodes.find(n => n.id === d.to.id);
                         return dest && dest.y ? dest.y : 0;
                     })
-                    .style('opacity', 0)
-                    .transition()
-                    .delay(300)
-                    .duration(400)
-                    .style('opacity', 0.8);
+                    .style('opacity', 0);
+                
+                // Анимация связей с задержкой
+                addAnimation(() => {
+                    link.transition()
+                        .duration(400)
+                        .style('opacity', 0.8);
+                }, 400);
                 
             } catch (error) {
                 console.error('Ошибка обновления визуализации:', error);
@@ -401,6 +434,7 @@
         
         // Обработчики кнопок
         document.getElementById('refreshBtn').addEventListener('click', () => {
+            clearAnimations(); // Очищаем анимации перед перезагрузкой
             location.reload();
         });
         
@@ -443,6 +477,8 @@
         window.addEventListener('resize', () => {
             if (svg && svg.node()) {
                 try {
+                    clearAnimations(); // Очищаем анимации при изменении размера
+                    
                     // Простое обновление позиций при изменении размера
                     const centerX = svg.node().clientWidth / 2;
                     const centerY = svg.node().clientHeight / 2;
@@ -461,6 +497,11 @@
                     console.error('Ошибка при изменении размера окна:', error);
                 }
             }
+        });
+        
+        // Очистка анимаций при закрытии страницы
+        window.addEventListener('beforeunload', () => {
+            clearAnimations();
         });
     </script>
 </body>
