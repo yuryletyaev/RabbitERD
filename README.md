@@ -153,6 +153,12 @@ RabbitERD/
 - Используйте прямой запуск: `python3 main.py`
 - Или используйте скрипт с проверками: `python3 run_basic.py`
 
+### Ошибка "Failed to build installable wheels for aiohttp"
+- Проблема совместимости с Python 3.13
+- Установите предварительно скомпилированную версию: `pip3 install --only-binary=all aiohttp`
+- Или используйте совместимые версии: `pip3 install -r requirements_py313.txt`
+- Альтернатива: используйте Python 3.11 или 3.12
+
 ### Включение Management Plugin
 ```bash
 rabbitmq-plugins enable rabbitmq_management
