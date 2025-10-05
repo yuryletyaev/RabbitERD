@@ -233,7 +233,7 @@
                 const queues = topology.queues || [];
                 const bindings = topology.bindings || [];
                 
-                if (exchanges.length === 0) {
+                if (exchanges.length === 0 && queues.length === 0) {
                     g.append('text')
                         .attr('x', '50%')
                         .attr('y', '50%')
@@ -247,11 +247,9 @@
                 
                 // Создаем структуру данных
                 const virtualHostBlocks = createVirtualHostBlocks(exchanges, queues, bindings);
-                console.log('Создано блоков VirtualHost:', virtualHostBlocks.length);
                 
                 // Фильтруем данные
                 const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
-                console.log('После фильтрации блоков:', filteredBlocks.length);
                 
                 // Рисуем блоки
                 drawVirtualHostBlocks(filteredBlocks);
@@ -351,10 +349,8 @@
         
         // Фильтрация блоков VirtualHost
         function filterVirtualHostBlocks(blocks) {
-            console.log('Фильтрация блоков с фильтрами:', currentFilters);
-            const filtered = blocks.filter(block => {
+            return blocks.filter(block => {
                 if (currentFilters.virtualHost && block.virtualHost.name !== currentFilters.virtualHost) {
-                    console.log('Блок отфильтрован по VirtualHost:', block.virtualHost.name);
                     return false;
                 }
                 
@@ -383,14 +379,11 @@
                 
                 return true;
             });
-            console.log('Результат фильтрации:', filtered.length, 'из', blocks.length, 'блоков');
-            return filtered;
         }
         
         // Рисование блоков VirtualHost
         function drawVirtualHostBlocks(blocks) {
             try {
-                console.log('Рисуем блоки VirtualHost:', blocks.length);
                 const virtualHostGroups = g.append('g')
                     .attr('class', 'virtualhost-blocks')
                     .selectAll('g')
@@ -687,25 +680,21 @@
             // Обработчики фильтров
             virtualHostFilter.addEventListener('change', (e) => {
                 currentFilters.virtualHost = e.target.value;
-                console.log('Фильтр VirtualHost изменен:', e.target.value);
                 updateVisualization();
             });
             
             exchangeFilter.addEventListener('change', (e) => {
                 currentFilters.exchange = e.target.value;
-                console.log('Фильтр Exchange изменен:', e.target.value);
                 updateVisualization();
             });
             
             routeFilter.addEventListener('change', (e) => {
                 currentFilters.route = e.target.value;
-                console.log('Фильтр Route изменен:', e.target.value);
                 updateVisualization();
             });
             
             queueFilter.addEventListener('change', (e) => {
                 currentFilters.queue = e.target.value;
-                console.log('Фильтр Queue изменен:', e.target.value);
                 updateVisualization();
             });
         }
