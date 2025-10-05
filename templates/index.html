@@ -385,6 +385,10 @@
                         // Обновляем queues в route
                         route.queues = filteredQueues;
                         
+                        // Пересчитываем количество очередей в роуте после фильтрации
+                        route.queueCount = filteredQueues.length;
+                        route.maxQueuesInRoute = filteredQueues.length;
+                        
                         // Возвращаем route только если в нем есть очереди после фильтрации
                         return filteredQueues.length > 0;
                     });
