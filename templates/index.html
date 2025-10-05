@@ -138,7 +138,7 @@
             routeHeight: 35,
             queueHeight: 25,
             colors: {
-                virtualHost: '#9C27B0',
+                virtualHost: 'transparent',
                 exchange: 'transparent',
                 route: '#FF9800',
                 queue: '#2196F3',
@@ -291,7 +291,7 @@
                 return {
                     virtualHost: vhost,
                     exchanges: vhostExchanges,
-                    x: 50 + index * 450,
+                    x: 50 + index * 500,
                     y: 50
                 };
             });
@@ -342,38 +342,78 @@
                     .attr('class', 'virtualhost-block')
                     .attr('transform', d => `translate(${d.x}, ${d.y})`);
                 
-                // Рисуем основной блок VirtualHost
-                virtualHostGroups.append('rect')
-                    .attr('width', config.virtualHostWidth)
-                    .attr('height', config.virtualHostHeight)
-                    .attr('rx', 15)
-                    .attr('fill', config.colors.virtualHost)
-                    .attr('stroke', '#333')
-                    .attr('stroke-width', 3);
-                
-                // Заголовок VirtualHost
-                virtualHostGroups.append('text')
-                    .attr('x', config.virtualHostWidth / 2)
-                    .attr('y', 30)
-                    .attr('text-anchor', 'middle')
-                    .attr('fill', 'white')
-                    .attr('font-weight', 'bold')
-                    .attr('font-size', '16px')
-                    .text(d => `VirtualHost: ${d.virtualHost.name}`);
-                
-                // Рисуем exchanges для каждого VirtualHost
+                // Рассчитываем размеры блока VirtualHost динамически
                 blocks.forEach((block, blockIndex) => {
+                    const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
+                    
+                    // Рассчитываем высоту на основе содержимого
+                    let totalHeight = 80; // Заголовок + отступы
+                    block.exchanges.forEach(exchangeData => {
+                        totalHeight += 50; // Высота exchange
+                        exchangeData.routes.forEach(route => {
+                            totalHeight += 40; // Высота route
+                            totalHeight += route.queues.length * 30; // Высота очередей
+                        });
+                    });
+                    
+                    // Рассчитываем ширину на основе содержимого
+                    let maxWidth = 200; // Минимальная ширина
+                    block.exchanges.forEach(exchangeData => {
+                        const exchangeWidth = Math.max(200, exchangeData.exchange.name.length * 8 + 100);
+                        maxWidth = Math.max(maxWidth, exchangeWidth);
+                        
+                        exchangeData.routes.forEach(route => {
+                            const routeWidth = Math.max(150, route.name.length * 8 + 100);
+                            maxWidth = Math.max(maxWidth, routeWidth + 40);
+                            
+                            route.queues.forEach(queue => {
+                                const queueWidth = Math.max(100, queue.name.length * 6 + 80);
+                                maxWidth = Math.max(maxWidth, queueWidth + 60);
+                            });
+                        });
+                    });
+                    
+                    // Рисуем основной блок VirtualHost с рассчитанными размерами
+                    currentVirtualHostGroup.append('rect')
+                        .attr('width', maxWidth)
+                        .attr('height', totalHeight)
+                        .attr('rx', 15)
+                        .attr('fill', config.colors.virtualHost)
+                        .attr('stroke', '#333')
+                        .attr('stroke-width', 3);
+                    
+                    // Обновляем размеры блока в данных
+                    block.width = maxWidth;
+                    block.height = totalHeight;
+                });
+                
+                // Заголовок VirtualHost для каждого блока отдельно
+                blocks.forEach((block, blockIndex) => {
+                    const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
+                    
+                    currentVirtualHostGroup.append('text')
+                        .attr('x', block.width / 2)
+                        .attr('y', 30)
+                        .attr('text-anchor', 'middle')
+                        .attr('fill', '#333')
+                        .attr('font-weight', 'bold')
+                        .attr('font-size', '16px')
+                        .text(`VirtualHost: ${block.virtualHost.name}`);
+                });
+                
+                // Рисуем содержимое для каждого VirtualHost отдельно
+                blocks.forEach((block, blockIndex) => {
+                    const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
                     let exchangeY = 60;
                     
                     block.exchanges.forEach((exchangeData, exchangeIndex) => {
-                        const exchangeGroup = virtualHostGroups.filter(d => d === block)
-                            .append('g')
+                        const exchangeGroup = currentVirtualHostGroup.append('g')
                             .attr('class', 'exchange')
                             .attr('transform', `translate(20, ${exchangeY})`);
                         
                         // Exchange
                         exchangeGroup.append('rect')
-                            .attr('width', config.virtualHostWidth - 40)
+                            .attr('width', block.width - 40)
                             .attr('height', config.blockHeight)
                             .attr('rx', 10)
                             .attr('fill', config.colors.exchange)
@@ -397,7 +437,7 @@
                             
                             // Роут
                             routeGroup.append('rect')
-                                .attr('width', config.virtualHostWidth - 60)
+                                .attr('width', block.width - 60)
                                 .attr('height', config.routeHeight)
                                 .attr('rx', 5)
                                 .attr('fill', config.colors.route)
@@ -419,7 +459,7 @@
                                     .attr('transform', `translate(20, ${queueY})`);
                                 
                                 queueGroup.append('rect')
-                                    .attr('width', config.virtualHostWidth - 80)
+                                    .attr('width', block.width - 80)
                                     .attr('height', config.queueHeight)
                                     .attr('rx', 3)
                                     .attr('fill', config.colors.queue)
