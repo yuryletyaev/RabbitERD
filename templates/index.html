@@ -346,45 +346,46 @@
                 blocks.forEach((block, blockIndex) => {
                     const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
                     
-                    // Рассчитываем высоту на основе содержимого
-                    let totalHeight = 80; // Заголовок + отступы
-                    block.exchanges.forEach(exchangeData => {
-                        totalHeight += 50; // Высота exchange
-                        exchangeData.routes.forEach(route => {
-                            totalHeight += 40; // Высота route
-                            totalHeight += route.queues.length * 30; // Высота очередей
-                        });
-                    });
+                    // Рассчитываем высоту на основе содержимого (максимальная высота среди всех exchanges)
+                    let maxHeight = 80; // Заголовок + отступы
+                    let totalWidth = 40; // Отступы
                     
-                    // Рассчитываем ширину на основе содержимого
-                    let maxWidth = 200; // Минимальная ширина
                     block.exchanges.forEach(exchangeData => {
-                        const exchangeWidth = Math.max(200, exchangeData.exchange.name.length * 8 + 100);
-                        maxWidth = Math.max(maxWidth, exchangeWidth);
+                        // Рассчитываем размеры exchange на основе содержимого
+                        let exchangeWidth = 200; // Минимальная ширина
+                        let exchangeHeight = 50; // Высота заголовка
                         
                         exchangeData.routes.forEach(route => {
                             const routeWidth = Math.max(150, route.name.length * 8 + 100);
-                            maxWidth = Math.max(maxWidth, routeWidth + 40);
+                            exchangeWidth = Math.max(exchangeWidth, routeWidth + 20);
+                            
+                            exchangeHeight += 40; // Высота route
                             
                             route.queues.forEach(queue => {
                                 const queueWidth = Math.max(100, queue.name.length * 6 + 80);
-                                maxWidth = Math.max(maxWidth, queueWidth + 60);
+                                exchangeWidth = Math.max(exchangeWidth, queueWidth + 40);
+                                
+                                exchangeHeight += 30; // Высота очереди
                             });
                         });
+                        
+                        // Обновляем общие размеры VirtualHost
+                        maxHeight = Math.max(maxHeight, exchangeHeight + 80);
+                        totalWidth += exchangeWidth + 20; // Ширина exchange + отступ
                     });
                     
                     // Рисуем основной блок VirtualHost с рассчитанными размерами
                     currentVirtualHostGroup.append('rect')
-                        .attr('width', maxWidth)
-                        .attr('height', totalHeight)
+                        .attr('width', totalWidth)
+                        .attr('height', maxHeight)
                         .attr('rx', 15)
                         .attr('fill', config.colors.virtualHost)
                         .attr('stroke', '#333')
                         .attr('stroke-width', 3);
                     
                     // Обновляем размеры блока в данных
-                    block.width = maxWidth;
-                    block.height = totalHeight;
+                    block.width = totalWidth;
+                    block.height = maxHeight;
                 });
                 
                 // Заголовок VirtualHost для каждого блока отдельно
@@ -404,17 +405,35 @@
                 // Рисуем содержимое для каждого VirtualHost отдельно
                 blocks.forEach((block, blockIndex) => {
                     const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
-                    let exchangeY = 60;
+                    let exchangeX = 20;
                     
                     block.exchanges.forEach((exchangeData, exchangeIndex) => {
+                        // Рассчитываем размеры exchange на основе содержимого
+                        let exchangeWidth = 200; // Минимальная ширина
+                        let exchangeHeight = 50; // Высота заголовка
+                        
+                        exchangeData.routes.forEach(route => {
+                            const routeWidth = Math.max(150, route.name.length * 8 + 100);
+                            exchangeWidth = Math.max(exchangeWidth, routeWidth + 20);
+                            
+                            exchangeHeight += 40; // Высота route
+                            
+                            route.queues.forEach(queue => {
+                                const queueWidth = Math.max(100, queue.name.length * 6 + 80);
+                                exchangeWidth = Math.max(exchangeWidth, queueWidth + 40);
+                                
+                                exchangeHeight += 30; // Высота очереди
+                            });
+                        });
+                        
                         const exchangeGroup = currentVirtualHostGroup.append('g')
                             .attr('class', 'exchange')
-                            .attr('transform', `translate(20, ${exchangeY})`);
+                            .attr('transform', `translate(${exchangeX}, 60)`);
                         
-                        // Exchange
+                        // Exchange с рассчитанными размерами
                         exchangeGroup.append('rect')
-                            .attr('width', block.width - 40)
-                            .attr('height', config.blockHeight)
+                            .attr('width', exchangeWidth)
+                            .attr('height', exchangeHeight)
                             .attr('rx', 10)
                             .attr('fill', config.colors.exchange)
                             .attr('stroke', '#333')
@@ -437,7 +456,7 @@
                             
                             // Роут
                             routeGroup.append('rect')
-                                .attr('width', block.width - 60)
+                                .attr('width', exchangeWidth - 20)
                                 .attr('height', config.routeHeight)
                                 .attr('rx', 5)
                                 .attr('fill', config.colors.route)
@@ -459,7 +478,7 @@
                                     .attr('transform', `translate(20, ${queueY})`);
                                 
                                 queueGroup.append('rect')
-                                    .attr('width', block.width - 80)
+                                    .attr('width', exchangeWidth - 40)
                                     .attr('height', config.queueHeight)
                                     .attr('rx', 3)
                                     .attr('fill', config.colors.queue)
@@ -480,8 +499,8 @@
                             routeY += 40 + (route.queues.length * 30);
                         });
                         
-                        // Переходим к следующему exchange
-                        exchangeY += 50 + (exchangeData.routes.length * 40);
+                        // Переходим к следующему exchange горизонтально
+                        exchangeX += exchangeWidth + 20;
                     });
                 });
             } catch (error) {
