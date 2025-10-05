@@ -7,11 +7,47 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
+        .filters-container {
+            margin: 10px 0;
+        }
+        
+        .filters-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .filters-header:hover {
+            background: #e5e5e5;
+        }
+        
+        .filters-toggle {
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+        
+        .filters-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        
         .filters {
             display: flex;
             gap: 20px;
             margin: 10px 0;
             flex-wrap: wrap;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .filters.collapsed {
+            max-height: 0;
+            margin: 0;
+            opacity: 0;
         }
         
         .filter-group {
@@ -87,30 +123,36 @@
                     <span class="value" id="connectionCount">{{ topology.connections|length }}</span>
                 </div>
             </div>
-            <div class="filters">
-                <div class="filter-group">
-                    <label>Фильтр по VirtualHost:</label>
-                    <select id="virtualHostFilter">
-                        <option value="">Все VirtualHost</option>
-                    </select>
+            <div class="filters-container">
+                <div class="filters-header" onclick="toggleFilters()">
+                    <span class="filters-toggle" id="filtersToggle">▼</span>
+                    <span>Фильтры</span>
                 </div>
-                <div class="filter-group">
-                    <label>Фильтр по Exchanges:</label>
-                    <select id="exchangeFilter">
-                        <option value="">Все Exchanges</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Фильтр по RoutingKey:</label>
-                    <select id="routeFilter">
-                        <option value="">Все RoutingKey</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Фильтр по очередям:</label>
-                    <select id="queueFilter">
-                        <option value="">Все очереди</option>
-                    </select>
+                <div class="filters" id="filters">
+                    <div class="filter-group">
+                        <label>Фильтр по VirtualHost:</label>
+                        <select id="virtualHostFilter">
+                            <option value="">Все VirtualHost</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Фильтр по Exchanges:</label>
+                        <select id="exchangeFilter">
+                            <option value="">Все Exchanges</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Фильтр по RoutingKey:</label>
+                        <select id="routeFilter">
+                            <option value="">Все RoutingKey</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Фильтр по очередям:</label>
+                        <select id="queueFilter">
+                            <option value="">Все очереди</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -278,8 +320,17 @@
                         return {
                             name: routeKey,
                             queues: routeQueues,
-                            bindings: routeBindings
+                            bindings: routeBindings,
+                            queueCount: routeQueues.length
                         };
+                    });
+                    
+                    // Находим максимальное количество очередей в роутах этого exchange
+                    const maxQueuesInExchange = Math.max(...routeList.map(route => route.queueCount), 1);
+                    
+                    // Добавляем информацию о максимальном количестве очередей к каждому роуту
+                    routeList.forEach(route => {
+                        route.maxQueuesInExchange = maxQueuesInExchange;
                     });
                     
                     return {
@@ -355,6 +406,10 @@
                         let exchangeWidth = 200; // Минимальная ширина
                         let exchangeHeight = 50; // Высота заголовка
                         
+                        // Учитываем длину названия Exchange
+                        const exchangeNameWidth = Math.max(200, exchangeData.exchange.name.length * 8 + 100);
+                        exchangeWidth = Math.max(exchangeWidth, exchangeNameWidth);
+                        
                         exchangeData.routes.forEach(route => {
                             const routeWidth = Math.max(150, route.name.length * 8 + 100);
                             exchangeWidth = Math.max(exchangeWidth, routeWidth + 20);
@@ -411,6 +466,10 @@
                         // Рассчитываем размеры exchange на основе содержимого
                         let exchangeWidth = 200; // Минимальная ширина
                         let exchangeHeight = 50; // Высота заголовка
+                        
+                        // Учитываем длину названия Exchange
+                        const exchangeNameWidth = Math.max(200, exchangeData.exchange.name.length * 8 + 100);
+                        exchangeWidth = Math.max(exchangeWidth, exchangeNameWidth);
                         
                         exchangeData.routes.forEach(route => {
                             const routeWidth = Math.max(150, route.name.length * 8 + 100);
@@ -477,11 +536,14 @@
                                     .attr('class', 'queue')
                                     .attr('transform', `translate(20, ${queueY})`);
                                 
+                                // Рассчитываем цвет на основе количества очередей в роуте
+                                const queueColor = getQueueColor(route.queueCount, route.maxQueuesInExchange);
+                                
                                 queueGroup.append('rect')
                                     .attr('width', exchangeWidth - 40)
                                     .attr('height', config.queueHeight)
                                     .attr('rx', 3)
-                                    .attr('fill', config.colors.queue)
+                                    .attr('fill', queueColor)
                                     .attr('stroke', '#333')
                                     .attr('stroke-width', 1);
                                 
@@ -513,6 +575,39 @@
                     .attr('font-size', '16px')
                     .attr('fill', '#ff0000')
                     .text('Ошибка отображения блоков');
+            }
+        }
+        
+        // Функция для расчета цвета очереди на основе количества очередей в роуте
+        function getQueueColor(queueCount, maxQueuesInRoute) {
+            if (maxQueuesInRoute <= 1) {
+                return '#2196F3'; // Светло-синий для одного элемента
+            }
+            
+            // Рассчитываем интенсивность от 0.3 (светлый) до 1.0 (темный)
+            const intensity = 0.3 + (0.7 * (queueCount - 1) / (maxQueuesInRoute - 1));
+            
+            // Конвертируем в RGB
+            const blue = Math.floor(243 * intensity);
+            const green = Math.floor(150 * intensity);
+            const red = Math.floor(33 * intensity);
+            
+            return `rgb(${red}, ${green}, ${blue})`;
+        }
+        
+        // Функция для сворачивания фильтров
+        function toggleFilters() {
+            const filters = document.getElementById('filters');
+            const toggle = document.getElementById('filtersToggle');
+            
+            if (filters.classList.contains('collapsed')) {
+                filters.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            } else {
+                filters.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▶';
             }
         }
         
