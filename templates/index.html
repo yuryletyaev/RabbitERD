@@ -66,7 +66,7 @@
     
     <script>
         // Данные топологии с проверкой
-        const topology = {{ topology|tojson|safe }} || {
+        const topology = {{ topology|tojson }} || {
             exchanges: [],
             queues: [],
             bindings: [],
@@ -131,11 +131,8 @@
                 
                 svg.call(zoom);
                 
-                // Создание симуляции
-                simulation = d3.forceSimulation()
-                    .force('link', d3.forceLink().id(d => d.id).distance(200))
-                    .force('charge', d3.forceManyBody().strength(-300))
-                    .force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
+                // Инициализация без force simulation
+                simulation = null; // Не используем force simulation
                 
                 updateVisualization();
             } catch (error) {
@@ -295,38 +292,53 @@
                     if (!node.y) node.y = Math.random() * 300 + 100;
                 });
                 
-                // Обновление симуляции
-                simulation.nodes(nodes);
-                simulation.force('link').links(links);
-                simulation.on('tick', () => {
-                    // Обновление позиций связей
-                    link
-                        .attr('x1', d => {
-                            const source = nodes.find(n => n.id === d.from.id);
-                            return source && source.x ? source.x : 0;
-                        })
-                        .attr('y1', d => {
-                            const source = nodes.find(n => n.id === d.from.id);
-                            return source && source.y ? source.y : 0;
-                        })
-                        .attr('x2', d => {
-                            const dest = nodes.find(n => n.id === d.to.id);
-                            return dest && dest.x ? dest.x : 0;
-                        })
-                        .attr('y2', d => {
-                            const dest = nodes.find(n => n.id === d.to.id);
-                            return dest && dest.y ? dest.y : 0;
-                        });
-                    
-                    // Обновление позиций узлов
-                    node.attr('transform', d => {
-                        const x = d.x || 0;
-                        const y = d.y || 0;
-                        return `translate(${x - config.nodeWidth/2}, ${y - config.nodeHeight/2})`;
-                    });
+                // Простое позиционирование без force simulation
+                const centerX = svg.node().clientWidth / 2;
+                const centerY = svg.node().clientHeight / 2;
+                const spacing = 200;
+                
+                // Позиционирование узлов в сетку
+                nodes.forEach((node, index) => {
+                    const row = Math.floor(index / 3);
+                    const col = index % 3;
+                    node.x = centerX + (col - 1) * spacing;
+                    node.y = centerY + (row - 1) * spacing;
                 });
                 
-                simulation.alpha(1).restart();
+                // Позиционирование узлов с анимацией
+                node.attr('transform', d => {
+                    const x = d.x || 0;
+                    const y = d.y || 0;
+                    return `translate(${x - config.nodeWidth/2}, ${y - config.nodeHeight/2})`;
+                })
+                .style('opacity', 0)
+                .transition()
+                .duration(500)
+                .style('opacity', 1);
+                
+                // Позиционирование связей с анимацией
+                link
+                    .attr('x1', d => {
+                        const source = nodes.find(n => n.id === d.from.id);
+                        return source && source.x ? source.x : 0;
+                    })
+                    .attr('y1', d => {
+                        const source = nodes.find(n => n.id === d.from.id);
+                        return source && source.y ? source.y : 0;
+                    })
+                    .attr('x2', d => {
+                        const dest = nodes.find(n => n.id === d.to.id);
+                        return dest && dest.x ? dest.x : 0;
+                    })
+                    .attr('y2', d => {
+                        const dest = nodes.find(n => n.id === d.to.id);
+                        return dest && dest.y ? dest.y : 0;
+                    })
+                    .style('opacity', 0)
+                    .transition()
+                    .delay(300)
+                    .duration(400)
+                    .style('opacity', 0.8);
                 
             } catch (error) {
                 console.error('Ошибка обновления визуализации:', error);
@@ -334,9 +346,9 @@
             }
         }
         
-        // Функции для перетаскивания
+        // Функции для перетаскивания (упрощенные)
         function dragstarted(event, d) {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
+            // Простое перетаскивание без force simulation
             d.fx = d.x || 0;
             d.fy = d.y || 0;
         }
@@ -344,10 +356,11 @@
         function dragged(event, d) {
             d.fx = event.x;
             d.fy = event.y;
+            // Обновляем позицию узла
+            d3.select(this).attr('transform', `translate(${event.x - config.nodeWidth/2}, ${event.y - config.nodeHeight/2})`);
         }
         
         function dragended(event, d) {
-            if (!event.active) simulation.alphaTarget(0);
             d.fx = null;
             d.fy = null;
         }
@@ -428,10 +441,22 @@
         
         // Обработка изменения размера окна
         window.addEventListener('resize', () => {
-            if (simulation && svg && svg.node()) {
+            if (svg && svg.node()) {
                 try {
-                    simulation.force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
-                    simulation.alpha(0.3).restart();
+                    // Простое обновление позиций при изменении размера
+                    const centerX = svg.node().clientWidth / 2;
+                    const centerY = svg.node().clientHeight / 2;
+                    
+                    // Обновляем позиции узлов относительно нового центра
+                    g.selectAll('.node').each(function(d) {
+                        if (d && d.x && d.y) {
+                            const newX = d.x + (centerX - d.x) * 0.1;
+                            const newY = d.y + (centerY - d.y) * 0.1;
+                            d.x = newX;
+                            d.y = newY;
+                            d3.select(this).attr('transform', `translate(${newX - config.nodeWidth/2}, ${newY - config.nodeHeight/2})`);
+                        }
+                    });
                 } catch (error) {
                     console.error('Ошибка при изменении размера окна:', error);
                 }
