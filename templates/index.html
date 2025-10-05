@@ -89,15 +89,15 @@
             </div>
             <div class="filters">
                 <div class="filter-group">
-                    <label>Фильтр по обменам:</label>
+                    <label>Фильтр по Exchanges:</label>
                     <select id="exchangeFilter">
-                        <option value="">Все обмены</option>
+                        <option value="">Все Exchanges</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>Фильтр по роутам:</label>
+                    <label>Фильтр по RoutingKey:</label>
                     <select id="routeFilter">
-                        <option value="">Все роуты</option>
+                        <option value="">Все RoutingKey</option>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -130,7 +130,7 @@
             routeHeight: 40,
             queueHeight: 30,
             colors: {
-                exchange: '#4CAF50',
+                exchange: 'transparent',
                 route: '#FF9800',
                 queue: '#2196F3',
                 connection: '#666'
@@ -247,8 +247,8 @@
                 return {
                     exchange: exchange,
                     routes: routeList,
-                    x: 50 + (index % 3) * 350,
-                    y: 50 + Math.floor(index / 3) * 250
+                    x: 50 + index * 350,
+                    y: 50
                 };
             });
         }
@@ -302,10 +302,10 @@
                 .attr('x', config.blockWidth / 2)
                 .attr('y', 25)
                 .attr('text-anchor', 'middle')
-                .attr('fill', 'white')
+                .attr('fill', '#333')
                 .attr('font-weight', 'bold')
                 .attr('font-size', '14px')
-                .text(d => d.exchange.name);
+                .text(`Exchange: ${d.exchange.name}`);
             
             // Рисуем роуты
             let routeY = 50;
@@ -330,7 +330,7 @@
                         .attr('y', 20)
                         .attr('fill', 'white')
                         .attr('font-size', '12px')
-                        .text(`Route: ${route.name}`);
+                        .text(`RoutingKey: ${route.name}`);
                     
                     // Очереди
                     let queueY = 45;
