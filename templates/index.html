@@ -126,9 +126,9 @@
         // Конфигурация
         const config = {
             blockWidth: 300,
-            blockHeight: 200,
-            routeHeight: 40,
-            queueHeight: 30,
+            blockHeight: 300, // Увеличиваем высоту блока
+            routeHeight: 35,
+            queueHeight: 25,
             colors: {
                 exchange: 'transparent',
                 route: '#FF9800',
@@ -308,9 +308,10 @@
                     .attr('font-size', '14px')
                     .text(d => `Exchange: ${d.exchange.name}`);
                 
-                // Рисуем роуты
-                let routeY = 50;
-                blocks.forEach(block => {
+                // Рисуем роуты для каждого блока отдельно
+                blocks.forEach((block, blockIndex) => {
+                    let routeY = 50;
+                    
                     block.routes.forEach((route, routeIndex) => {
                         const routeGroup = blockGroups.filter(d => d === block)
                             .append('g')
@@ -334,7 +335,7 @@
                             .text(`RoutingKey: ${route.name}`);
                         
                         // Очереди
-                        let queueY = 45;
+                        let queueY = 40;
                         route.queues.forEach((queue, queueIndex) => {
                             const queueGroup = routeGroup.append('g')
                                 .attr('class', 'queue')
@@ -350,15 +351,16 @@
                             
                             queueGroup.append('text')
                                 .attr('x', 10)
-                                .attr('y', 18)
+                                .attr('y', 16)
                                 .attr('fill', 'white')
                                 .attr('font-size', '10px')
                                 .text(queue.name);
                             
-                            queueY += 35;
+                            queueY += 30;
                         });
                         
-                        routeY += 50 + (route.queues.length * 35);
+                        // Переходим к следующему роуту
+                        routeY += 40 + (route.queues.length * 30);
                     });
                 });
             } catch (error) {
