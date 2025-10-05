@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ошибка - RabbitMQ ERD Visualizer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>RabbitMQ ERD Visualizer</h1>
+        </header>
+        
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h2>Ошибка подключения</h2>
+            <p>Не удалось подключиться к RabbitMQ Management API.</p>
+            <div class="error-details">
+                <strong>Детали ошибки:</strong>
+                <pre>{{ error }}</pre>
+            </div>
+            
+            <div class="error-suggestions">
+                <h3>Возможные решения:</h3>
+                <ul>
+                    <li>Убедитесь, что RabbitMQ запущен</li>
+                    <li>Проверьте настройки в config.json</li>
+                    <li>Убедитесь, что Management Plugin включен</li>
+                    <li>Проверьте доступность порта 15672</li>
+                </ul>
+            </div>
+            
+            <div class="error-actions">
+                <button onclick="location.reload()" class="btn">Попробовать снова</button>
+                <button onclick="window.location.href='/'" class="btn">На главную</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RabbitMQ ERD Visualizer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>RabbitMQ ERD Visualizer</h1>
+            <div class="controls">
+                <button id="refreshBtn" class="btn">Обновить</button>
+                <button id="zoomInBtn" class="btn">+</button>
+                <button id="zoomOutBtn" class="btn">-</button>
+                <button id="resetZoomBtn" class="btn">Сброс</button>
+            </div>
+        </header>
+        
+        <div class="info-panel">
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="label">Обмены:</span>
+                    <span class="value" id="exchangeCount">{{ topology.exchanges|length }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Очереди:</span>
+                    <span class="value" id="queueCount">{{ topology.queues|length }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Связи:</span>
+                    <span class="value" id="connectionCount">{{ topology.connections|length }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="visualization-container">
+            <svg id="diagram" width="100%" height="600"></svg>
+        </div>
+        
+        <div class="details-panel" id="detailsPanel" style="display: none;">
+            <h3>Детали</h3>
+            <div id="detailsContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Данные топологии
+        const topology = {{ topology|tojson }};
+        
+        // Настройки визуализации
+        const config = {
+            nodeWidth: 200,
+            nodeHeight: 100,
+            spacing: 150,
+            colors: {
+                exchange: '#4CAF50',
+                queue: '#2196F3',
+                connection: '#FF9800'
+            }
+        };
+        
+        let svg, g, zoom;
+        let simulation;
+        
+        // Инициализация визуализации
+        function initVisualization() {
+            svg = d3.select('#diagram');
+            g = svg.append('g');
+            
+            // Настройка зума
+            zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            // Создание симуляции
+            simulation = d3.forceSimulation()
+                .force('link', d3.forceLink().id(d => d.id).distance(200))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
+            
+            updateVisualization();
+        }
+        
+        // Обновление визуализации
+        function updateVisualization() {
+            // Подготовка данных
+            const nodes = [];
+            const links = topology.connections || [];
+            
+            // Добавляем обмены
+            topology.exchanges.forEach(exchange => {
+                nodes.push({
+                    id: `exchange_${exchange.name}`,
+                    name: exchange.name,
+                    type: 'exchange',
+                    data: exchange
+                });
+            });
+            
+            // Добавляем очереди
+            topology.queues.forEach(queue => {
+                nodes.push({
+                    id: `queue_${queue.name}`,
+                    name: queue.name,
+                    type: 'queue',
+                    data: queue
+                });
+            });
+            
+            // Очистка предыдущих элементов
+            g.selectAll('*').remove();
+            
+            // Создание связей
+            const link = g.append('g')
+                .attr('class', 'links')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('stroke', config.colors.connection)
+                .attr('stroke-width', 2)
+                .attr('stroke-opacity', 0.8);
+            
+            // Создание узлов
+            const node = g.append('g')
+                .attr('class', 'nodes')
+                .selectAll('g')
+                .data(nodes)
+                .enter().append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            // Добавление прямоугольников для узлов
+            node.append('rect')
+                .attr('width', config.nodeWidth)
+                .attr('height', config.nodeHeight)
+                .attr('rx', 10)
+                .attr('fill', d => d.type === 'exchange' ? config.colors.exchange : config.colors.queue)
+                .attr('stroke', '#333')
+                .attr('stroke-width', 2);
+            
+            // Добавление текста
+            node.append('text')
+                .attr('x', config.nodeWidth / 2)
+                .attr('y', config.nodeHeight / 2)
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('fill', 'white')
+                .attr('font-weight', 'bold')
+                .attr('font-size', '12px')
+                .text(d => d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name);
+            
+            // Добавление типа узла
+            node.append('text')
+                .attr('x', config.nodeWidth / 2)
+                .attr('y', config.nodeHeight / 2 + 20)
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('fill', 'white')
+                .attr('font-size', '10px')
+                .text(d => d.type === 'exchange' ? 'Exchange' : 'Queue');
+            
+            // Обработчики событий
+            node.on('click', showDetails);
+            node.on('mouseover', highlightNode);
+            node.on('mouseout', unhighlightNode);
+            
+            // Обновление симуляции
+            simulation.nodes(nodes);
+            simulation.force('link').links(links);
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.destination.x)
+                    .attr('y2', d => d.destination.y);
+                
+                node.attr('transform', d => `translate(${d.x - config.nodeWidth/2}, ${d.y - config.nodeHeight/2})`);
+            });
+            
+            simulation.alpha(1).restart();
+        }
+        
+        // Функции для перетаскивания
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        // Показать детали узла
+        function showDetails(event, d) {
+            const detailsPanel = document.getElementById('detailsPanel');
+            const detailsContent = document.getElementById('detailsContent');
+            
+            let html = `<h4>${d.name} (${d.type})</h4>`;
+            
+            if (d.type === 'exchange') {
+                html += `<p><strong>Тип:</strong> ${d.data.type || 'direct'}</p>`;
+                html += `<p><strong>Durable:</strong> ${d.data.durable ? 'Да' : 'Нет'}</p>`;
+                html += `<p><strong>Auto Delete:</strong> ${d.data.auto_delete ? 'Да' : 'Нет'}</p>`;
+            } else {
+                html += `<p><strong>Сообщений:</strong> ${d.data.messages || 0}</p>`;
+                html += `<p><strong>Потребители:</strong> ${d.data.consumers || 0}</p>`;
+                html += `<p><strong>Durable:</strong> ${d.data.durable ? 'Да' : 'Нет'}</p>`;
+            }
+            
+            detailsContent.innerHTML = html;
+            detailsPanel.style.display = 'block';
+        }
+        
+        // Подсветка узла
+        function highlightNode(event, d) {
+            d3.select(this).select('rect')
+                .attr('stroke-width', 4)
+                .attr('stroke', '#FFD700');
+        }
+        
+        function unhighlightNode(event, d) {
+            d3.select(this).select('rect')
+                .attr('stroke-width', 2)
+                .attr('stroke', '#333');
+        }
+        
+        // Обработчики кнопок
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            location.reload();
+        });
+        
+        document.getElementById('zoomInBtn').addEventListener('click', () => {
+            svg.transition().call(zoom.scaleBy, 1.5);
+        });
+        
+        document.getElementById('zoomOutBtn').addEventListener('click', () => {
+            svg.transition().call(zoom.scaleBy, 1 / 1.5);
+        });
+        
+        document.getElementById('resetZoomBtn').addEventListener('click', () => {
+            svg.transition().call(zoom.transform, d3.zoomIdentity);
+        });
+        
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', initVisualization);
+        
+        // Обработка изменения размера окна
+        window.addEventListener('resize', () => {
+            if (simulation) {
+                simulation.force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
+                simulation.alpha(0.3).restart();
+            }
+        });
+    </script>
+</body>
+</html>
