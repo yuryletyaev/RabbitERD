@@ -76,6 +76,9 @@
         // Отладочная информация
         console.log('Данные топологии:', topology);
         console.log('D3 доступен:', typeof d3 !== 'undefined');
+        console.log('Количество обменов:', topology.exchanges ? topology.exchanges.length : 0);
+        console.log('Количество очередей:', topology.queues ? topology.queues.length : 0);
+        console.log('Количество связей:', topology.connections ? topology.connections.length : 0);
         
         // Настройки визуализации
         const config = {
@@ -207,7 +210,23 @@
                     .enter().append('line')
                     .attr('stroke', config.colors.connection)
                     .attr('stroke-width', 2)
-                    .attr('stroke-opacity', 0.8);
+                    .attr('stroke-opacity', 0.8)
+                    .attr('x1', d => {
+                        const source = nodes.find(n => n.id === d.from.id);
+                        return source ? source.x : 0;
+                    })
+                    .attr('y1', d => {
+                        const source = nodes.find(n => n.id === d.from.id);
+                        return source ? source.y : 0;
+                    })
+                    .attr('x2', d => {
+                        const dest = nodes.find(n => n.id === d.to.id);
+                        return dest ? dest.x : 0;
+                    })
+                    .attr('y2', d => {
+                        const dest = nodes.find(n => n.id === d.to.id);
+                        return dest ? dest.y : 0;
+                    });
                 
                 // Создание узлов
                 const node = g.append('g')
@@ -256,17 +275,55 @@
                 node.on('mouseover', highlightNode);
                 node.on('mouseout', unhighlightNode);
                 
+                // Проверка на пустые данные
+                if (nodes.length === 0) {
+                    console.log('Нет данных для отображения');
+                    g.append('text')
+                        .attr('x', '50%')
+                        .attr('y', '50%')
+                        .attr('text-anchor', 'middle')
+                        .attr('dy', '0.35em')
+                        .attr('font-size', '18px')
+                        .attr('fill', '#666')
+                        .text('Нет данных для отображения');
+                    return;
+                }
+                
+                // Инициализация координат для узлов
+                nodes.forEach(node => {
+                    if (!node.x) node.x = Math.random() * 400 + 100;
+                    if (!node.y) node.y = Math.random() * 300 + 100;
+                });
+                
                 // Обновление симуляции
                 simulation.nodes(nodes);
                 simulation.force('link').links(links);
                 simulation.on('tick', () => {
+                    // Обновление позиций связей
                     link
-                        .attr('x1', d => d.source.x)
-                        .attr('y1', d => d.source.y)
-                        .attr('x2', d => d.destination.x)
-                        .attr('y2', d => d.destination.y);
+                        .attr('x1', d => {
+                            const source = nodes.find(n => n.id === d.from.id);
+                            return source && source.x ? source.x : 0;
+                        })
+                        .attr('y1', d => {
+                            const source = nodes.find(n => n.id === d.from.id);
+                            return source && source.y ? source.y : 0;
+                        })
+                        .attr('x2', d => {
+                            const dest = nodes.find(n => n.id === d.to.id);
+                            return dest && dest.x ? dest.x : 0;
+                        })
+                        .attr('y2', d => {
+                            const dest = nodes.find(n => n.id === d.to.id);
+                            return dest && dest.y ? dest.y : 0;
+                        });
                     
-                    node.attr('transform', d => `translate(${d.x - config.nodeWidth/2}, ${d.y - config.nodeHeight/2})`);
+                    // Обновление позиций узлов
+                    node.attr('transform', d => {
+                        const x = d.x || 0;
+                        const y = d.y || 0;
+                        return `translate(${x - config.nodeWidth/2}, ${y - config.nodeHeight/2})`;
+                    });
                 });
                 
                 simulation.alpha(1).restart();
@@ -280,8 +337,8 @@
         // Функции для перетаскивания
         function dragstarted(event, d) {
             if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x;
-            d.fy = d.y;
+            d.fx = d.x || 0;
+            d.fy = d.y || 0;
         }
         
         function dragged(event, d) {
@@ -335,15 +392,21 @@
         });
         
         document.getElementById('zoomInBtn').addEventListener('click', () => {
-            svg.transition().call(zoom.scaleBy, 1.5);
+            if (svg && zoom) {
+                svg.transition().call(zoom.scaleBy, 1.5);
+            }
         });
         
         document.getElementById('zoomOutBtn').addEventListener('click', () => {
-            svg.transition().call(zoom.scaleBy, 1 / 1.5);
+            if (svg && zoom) {
+                svg.transition().call(zoom.scaleBy, 1 / 1.5);
+            }
         });
         
         document.getElementById('resetZoomBtn').addEventListener('click', () => {
-            svg.transition().call(zoom.transform, d3.zoomIdentity);
+            if (svg && zoom) {
+                svg.transition().call(zoom.transform, d3.zoomIdentity);
+            }
         });
         
         // Инициализация при загрузке страницы
@@ -365,9 +428,13 @@
         
         // Обработка изменения размера окна
         window.addEventListener('resize', () => {
-            if (simulation) {
-                simulation.force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
-                simulation.alpha(0.3).restart();
+            if (simulation && svg && svg.node()) {
+                try {
+                    simulation.force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
+                    simulation.alpha(0.3).restart();
+                } catch (error) {
+                    console.error('Ошибка при изменении размера окна:', error);
+                }
             }
         });
     </script>
