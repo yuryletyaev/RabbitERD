@@ -48,6 +48,13 @@ pip install -r requirements.txt
 
 ## Запуск
 
+### Тестирование подключения
+Перед запуском рекомендуется проверить подключение к RabbitMQ:
+```bash
+python test_app.py
+```
+
+### Запуск приложения
 ```bash
 python main.py
 ```
@@ -55,6 +62,11 @@ python main.py
 Или с помощью uvicorn:
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Или используйте удобный скрипт:
+```bash
+python run.py
 ```
 
 После запуска откройте браузер и перейдите по адресу: http://localhost:8000
@@ -116,6 +128,12 @@ RabbitERD/
 - Проверьте настройки в `config.json`
 - Убедитесь, что Management Plugin включен
 - Проверьте доступность порта 15672
+
+### Ошибка "Cannot read properties of undefined" в браузере
+- Проверьте консоль браузера на наличие ошибок
+- Убедитесь, что D3.js загружается (проверьте подключение к интернету)
+- Приложение автоматически попробует альтернативный CDN
+- Проверьте, что RabbitMQ Management API доступен
 
 ### Включение Management Plugin
 ```bash

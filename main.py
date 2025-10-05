@@ -26,11 +26,22 @@ async def root(request: Request):
     try:
         # Получаем данные о топологии RabbitMQ
         topology = await rabbitmq_client.get_topology()
+        
+        # Убеждаемся, что все поля присутствуют
+        if not topology:
+            topology = {"exchanges": [], "queues": [], "bindings": [], "connections": []}
+        
+        # Проверяем наличие обязательных полей
+        for field in ["exchanges", "queues", "bindings", "connections"]:
+            if field not in topology:
+                topology[field] = []
+        
         return templates.TemplateResponse("index.html", {
             "request": request,
             "topology": topology
         })
     except Exception as e:
+        print(f"Ошибка получения топологии: {e}")
         return templates.TemplateResponse("error.html", {
             "request": request,
             "error": str(e)

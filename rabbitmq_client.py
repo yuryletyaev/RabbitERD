@@ -58,14 +58,26 @@ class RabbitMQClient:
             exchanges, queues, bindings = await asyncio.gather(
                 self.get_exchanges(),
                 self.get_queues(),
-                self.get_bindings()
+                self.get_bindings(),
+                return_exceptions=True
             )
             
+            # Обработка исключений из gather
+            if isinstance(exchanges, Exception):
+                print(f"Ошибка получения обменов: {exchanges}")
+                exchanges = []
+            if isinstance(queues, Exception):
+                print(f"Ошибка получения очередей: {queues}")
+                queues = []
+            if isinstance(bindings, Exception):
+                print(f"Ошибка получения привязок: {bindings}")
+                bindings = []
+            
             return {
-                "exchanges": exchanges,
-                "queues": queues,
-                "bindings": bindings,
-                "connections": self._build_connections(exchanges, queues, bindings)
+                "exchanges": exchanges or [],
+                "queues": queues or [],
+                "bindings": bindings or [],
+                "connections": self._build_connections(exchanges or [], queues or [], bindings or [])
             }
         except Exception as e:
             print(f"Ошибка при получении топологии: {e}")
