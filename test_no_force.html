@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест без force simulation</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #diagram { width: 100%; height: 400px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Тест без force simulation</h1>
+    <div id="status"></div>
+    <svg id="diagram" width="100%" height="400"></svg>
+    
+    <script>
+        // Тестовые данные
+        const testData = {
+            exchanges: [
+                { name: 'test-exchange', type: 'direct' }
+            ],
+            queues: [
+                { name: 'test-queue-1', messages: 0 },
+                { name: 'test-queue-2', messages: 5 }
+            ],
+            connections: [
+                {
+                    from: { type: 'exchange', name: 'test-exchange', id: 'exchange_test-exchange' },
+                    to: { type: 'queue', name: 'test-queue-1', id: 'queue_test-queue-1' }
+                },
+                {
+                    from: { type: 'exchange', name: 'test-exchange', id: 'exchange_test-exchange' },
+                    to: { type: 'queue', name: 'test-queue-2', id: 'queue_test-queue-2' }
+                }
+            ]
+        };
+        
+        const config = {
+            nodeWidth: 200,
+            nodeHeight: 100,
+            colors: {
+                exchange: '#4CAF50',
+                queue: '#2196F3',
+                connection: '#FF9800'
+            }
+        };
+        
+        let svg, g;
+        
+        function initVisualization() {
+            try {
+                const status = document.getElementById('status');
+                
+                if (typeof d3 === 'undefined') {
+                    status.innerHTML = '<p class="error">❌ D3.js не загружен</p>';
+                    return;
+                }
+                
+                status.innerHTML = '<p class="success">✅ D3.js загружен</p>';
+                
+                svg = d3.select('#diagram');
+                g = svg.append('g');
+                
+                updateVisualization();
+                
+            } catch (error) {
+                console.error('Ошибка инициализации:', error);
+                document.getElementById('status').innerHTML = `<p class="error">❌ Ошибка: ${error.message}</p>`;
+            }
+        }
+        
+        function updateVisualization() {
+            try {
+                const nodes = [];
+                const links = testData.connections || [];
+                
+                // Добавляем обмены
+                if (testData.exchanges && Array.isArray(testData.exchanges)) {
+                    testData.exchanges.forEach(exchange => {
+                        if (exchange && exchange.name) {
+                            nodes.push({
+                                id: `exchange_${exchange.name}`,
+                                name: exchange.name,
+                                type: 'exchange',
+                                data: exchange
+                            });
+                        }
+                    });
+                }
+                
+                // Добавляем очереди
+                if (testData.queues && Array.isArray(testData.queues)) {
+                    testData.queues.forEach(queue => {
+                        if (queue && queue.name) {
+                            nodes.push({
+                                id: `queue_${queue.name}`,
+                                name: queue.name,
+                                type: 'queue',
+                                data: queue
+                            });
+                        }
+                    });
+                }
+                
+                if (nodes.length === 0) {
+                    console.log('Нет данных для отображения');
+                    g.append('text')
+                        .attr('x', '50%')
+                        .attr('y', '50%')
+                        .attr('text-anchor', 'middle')
+                        .attr('dy', '0.35em')
+                        .attr('font-size', '18px')
+                        .attr('fill', '#666')
+                        .text('Нет данных для отображения');
+                    return;
+                }
+                
+                // Очистка предыдущих элементов
+                g.selectAll('*').remove();
+                
+                // Простое позиционирование без force simulation
+                const centerX = svg.node().clientWidth / 2;
+                const centerY = svg.node().clientHeight / 2;
+                const spacing = 200;
+                
+                // Позиционирование узлов в сетку
+                nodes.forEach((node, index) => {
+                    const row = Math.floor(index / 3);
+                    const col = index % 3;
+                    node.x = centerX + (col - 1) * spacing;
+                    node.y = centerY + (row - 1) * spacing;
+                });
+                
+                // Создание связей
+                const link = g.append('g')
+                    .attr('class', 'links')
+                    .selectAll('line')
+                    .data(links)
+                    .enter().append('line')
+                    .attr('stroke', config.colors.connection)
+                    .attr('stroke-width', 2)
+                    .attr('stroke-opacity', 0.8);
+                
+                // Создание узлов
+                const node = g.append('g')
+                    .attr('class', 'nodes')
+                    .selectAll('g')
+                    .data(nodes)
+                    .enter().append('g')
+                    .attr('class', 'node');
+                
+                // Прямоугольники
+                node.append('rect')
+                    .attr('width', config.nodeWidth)
+                    .attr('height', config.nodeHeight)
+                    .attr('rx', 10)
+                    .attr('fill', d => d.type === 'exchange' ? config.colors.exchange : config.colors.queue)
+                    .attr('stroke', '#333')
+                    .attr('stroke-width', 2);
+                
+                // Текст
+                node.append('text')
+                    .attr('x', config.nodeWidth / 2)
+                    .attr('y', config.nodeHeight / 2)
+                    .attr('text-anchor', 'middle')
+                    .attr('dy', '0.35em')
+                    .attr('fill', 'white')
+                    .attr('font-weight', 'bold')
+                    .attr('font-size', '12px')
+                    .text(d => d.name);
+                
+                // Позиционирование узлов с анимацией
+                node.attr('transform', d => {
+                    const x = d.x || 0;
+                    const y = d.y || 0;
+                    return `translate(${x - config.nodeWidth/2}, ${y - config.nodeHeight/2})`;
+                })
+                .style('opacity', 0);
+                
+                // Анимация появления с задержкой
+                setTimeout(() => {
+                    node.transition()
+                        .duration(500)
+                        .style('opacity', 1);
+                }, 100);
+                
+                // Позиционирование связей
+                link
+                    .attr('x1', d => {
+                        const source = nodes.find(n => n.id === d.from.id);
+                        return source && source.x ? source.x : 0;
+                    })
+                    .attr('y1', d => {
+                        const source = nodes.find(n => n.id === d.from.id);
+                        return source && source.y ? source.y : 0;
+                    })
+                    .attr('x2', d => {
+                        const dest = nodes.find(n => n.id === d.to.id);
+                        return dest && dest.x ? dest.x : 0;
+                    })
+                    .attr('y2', d => {
+                        const dest = nodes.find(n => n.id === d.to.id);
+                        return dest && dest.y ? dest.y : 0;
+                    })
+                    .style('opacity', 0);
+                
+                // Анимация связей с задержкой
+                setTimeout(() => {
+                    link.transition()
+                        .duration(400)
+                        .style('opacity', 0.8);
+                }, 400);
+                
+                document.getElementById('status').innerHTML += '<p class="success">✅ Визуализация создана успешно</p>';
+                
+            } catch (error) {
+                console.error('Ошибка обновления визуализации:', error);
+                document.getElementById('status').innerHTML += `<p class="error">❌ Ошибка: ${error.message}</p>`;
+            }
+        }
+        
+        // Запуск при загрузке
+        window.addEventListener('load', initVisualization);
+    </script>
+</body>
+</html>

@@ -80,10 +80,8 @@
                 
                 svg.call(zoom);
                 
-                // Создание простой симуляции без сложных сил
-                simulation = d3.forceSimulation()
-                    .force('charge', d3.forceManyBody().strength(-100))
-                    .force('center', d3.forceCenter(svg.node().clientWidth / 2, svg.node().clientHeight / 2));
+                // Инициализация без force simulation
+                simulation = null; // Не используем force simulation
                 
                 updateVisualization();
             } catch (error) {
@@ -227,10 +225,14 @@
                 const y = d.y || 0;
                 return `translate(${x - config.nodeWidth/2}, ${y - config.nodeHeight/2})`;
             })
-            .style('opacity', 0)
-            .transition()
-            .duration(500)
-            .style('opacity', 1);
+            .style('opacity', 0);
+            
+            // Анимация появления с задержкой
+            setTimeout(() => {
+                node.transition()
+                    .duration(500)
+                    .style('opacity', 1);
+            }, 100);
             
             // Позиционирование связей с анимацией
             link
@@ -250,11 +252,14 @@
                     const dest = nodes.find(n => n.id === d.to.id);
                     return dest && dest.y ? dest.y : 0;
                 })
-                .style('opacity', 0)
-                .transition()
-                .delay(300)
-                .duration(400)
-                .style('opacity', 0.8);
+                .style('opacity', 0);
+            
+            // Анимация связей с задержкой
+            setTimeout(() => {
+                link.transition()
+                    .duration(400)
+                    .style('opacity', 0.8);
+            }, 400);
             } catch (error) {
                 console.error('Ошибка обновления визуализации:', error);
                 document.querySelector('.visualization-container').innerHTML = 
@@ -262,7 +267,7 @@
             }
         }
         
-        // Функции для перетаскивания (упрощенные)
+        // Функции для перетаскивания (статическое позиционирование)
         function dragstarted(event, d) {
             // Простое перетаскивание без force simulation
             d.fx = d.x || 0;
@@ -321,15 +326,21 @@
         });
         
         document.getElementById('zoomInBtn').addEventListener('click', () => {
-            svg.transition().call(zoom.scaleBy, 1.5);
+            if (svg && zoom) {
+                svg.transition().call(zoom.scaleBy, 1.5);
+            }
         });
         
         document.getElementById('zoomOutBtn').addEventListener('click', () => {
-            svg.transition().call(zoom.scaleBy, 1 / 1.5);
+            if (svg && zoom) {
+                svg.transition().call(zoom.scaleBy, 1 / 1.5);
+            }
         });
         
         document.getElementById('resetZoomBtn').addEventListener('click', () => {
-            svg.transition().call(zoom.transform, d3.zoomIdentity);
+            if (svg && zoom) {
+                svg.transition().call(zoom.transform, d3.zoomIdentity);
+            }
         });
         
         // Инициализация при загрузке страницы
