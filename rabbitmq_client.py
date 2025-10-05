@@ -101,3 +101,4 @@ class RabbitMQClient:
                 })
         
         return connections
+

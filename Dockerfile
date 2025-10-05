@@ -26,3 +26,4 @@ EXPOSE 8000
 
 # Команда запуска
 CMD ["python", "run.py"]
+

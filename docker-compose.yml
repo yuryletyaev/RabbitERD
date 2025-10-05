@@ -35,3 +35,4 @@ volumes:
 networks:
   rabbitmq_network:
     driver: bridge
+
