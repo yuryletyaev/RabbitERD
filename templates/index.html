@@ -645,7 +645,6 @@
             });
             
             // Заполняем фильтр обменов
-            const exchangeFilter = document.getElementById('exchangeFilter');
             exchanges.forEach(exchange => {
                 const option = document.createElement('option');
                 option.value = exchange.name;
@@ -654,7 +653,6 @@
             });
             
             // Заполняем фильтр очередей
-            const queueFilter = document.getElementById('queueFilter');
             queues.forEach(queue => {
                 const option = document.createElement('option');
                 option.value = queue.name;
@@ -663,7 +661,6 @@
             });
             
             // Заполняем фильтр роутов
-            const routeFilter = document.getElementById('routeFilter');
             const routes = new Set();
             bindings.forEach(binding => {
                 if (binding.routing_key) {
