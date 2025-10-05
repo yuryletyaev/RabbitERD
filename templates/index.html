@@ -15,7 +15,6 @@
                 <button id="refreshBtn" class="btn">Обновить</button>
                 <button id="zoomInBtn" class="btn">+</button>
                 <button id="zoomOutBtn" class="btn">-</button>
-                <button id="resetZoomBtn" class="btn">Сброс</button>
             </div>
         </header>
         
@@ -337,11 +336,6 @@
             }
         });
         
-        document.getElementById('resetZoomBtn').addEventListener('click', () => {
-            if (svg && zoom) {
-                svg.transition().call(zoom.transform, d3.zoomIdentity);
-            }
-        });
         
         // Инициализация при загрузке страницы
         window.addEventListener('load', () => {
