@@ -2,12 +2,47 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 import json
 import asyncio
 from rabbitmq_client import RabbitMQClient
 from typing import Dict, List, Any
+import logging
 
 app = FastAPI(title="RabbitMQ ERD Visualizer")
+
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Middleware для логирования запросов
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Логирование всех HTTP запросов"""
+    start_time = asyncio.get_event_loop().time()
+    
+    # Пропускаем системные запросы
+    if request.url.path.startswith("/.well-known") or request.url.path == "/favicon.ico":
+        response = await call_next(request)
+        return response
+    
+    logger.info(f"📥 {request.method} {request.url.path}")
+    
+    response = await call_next(request)
+    
+    process_time = asyncio.get_event_loop().time() - start_time
+    logger.info(f"📤 {response.status_code} - {process_time:.3f}s")
+    
+    return response
 
 # Подключаем статические файлы и шаблоны
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -82,6 +117,37 @@ async def get_bindings():
         return {"status": "success", "data": bindings}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+# Обработка системных запросов от браузеров и DevTools
+@app.get("/.well-known/apps/ecific/com.chrome.devtools.json")
+async def chrome_devtools():
+    """Обработка запросов Chrome DevTools"""
+    return {"status": "not_found", "message": "Chrome DevTools configuration not available"}
+
+@app.get("/.well-known/{path:path}")
+async def well_known(path: str):
+    """Обработка запросов .well-known"""
+    return {"status": "not_found", "message": f"Resource not found: {path}"}
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Обработка запросов favicon"""
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
+@app.get("/robots.txt")
+async def robots():
+    """Обработка запросов robots.txt"""
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse("User-agent: *\nDisallow: /api/")
+
+# Обработка всех остальных запросов
+@app.get("/{path:path}")
+async def catch_all(path: str):
+    """Обработка всех остальных GET запросов"""
+    if path.startswith("api/"):
+        return {"status": "error", "message": f"API endpoint not found: {path}"}
+    return {"status": "not_found", "message": f"Page not found: {path}"}
 
 if __name__ == "__main__":
     import uvicorn
