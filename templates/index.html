@@ -38,7 +38,7 @@
         .filters input[type="text"] {
             height: 32px;
             line-height: 20px;
-            padding: 6px 28px 6px 10px; /* запас справа под кнопку сброса */
+            padding: 6px 10px;
             font-size: 14px;
             box-sizing: border-box;
             width: 220px;
@@ -57,7 +57,7 @@
             gap: 6px;
         }
 
-        .filter-reset {
+        .filter-reset, .filter-open {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -71,7 +71,7 @@
             user-select: none;
         }
 
-        .filter-reset:hover {
+        .filter-reset:hover, .filter-open:hover {
             background: #f0f0f0;
         }
         .stats-container {
@@ -264,6 +264,7 @@
                         <label for="virtualHostFilter">VirtualHost:</label>
                         <div class="filter-input-row">
                             <input type="text" id="virtualHostFilter" placeholder="Введите VirtualHost или выберите из списка" list="virtualHostList">
+                            <button type="button" id="virtualHostOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="virtualHostReset" class="filter-reset" title="Сбросить VirtualHost" aria-label="Сбросить VirtualHost">×</button>
                         </div>
                         <datalist id="virtualHostList"></datalist>
@@ -272,6 +273,7 @@
                         <label for="exchangeFilter">Exchange:</label>
                         <div class="filter-input-row">
                             <input type="text" id="exchangeFilter" placeholder="Введите Exchange или выберите из списка" list="exchangeList">
+                            <button type="button" id="exchangeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="exchangeReset" class="filter-reset" title="Сбросить Exchange" aria-label="Сбросить Exchange">×</button>
                         </div>
                         <datalist id="exchangeList"></datalist>
@@ -280,6 +282,7 @@
                         <label for="routeFilter">RoutingKey:</label>
                         <div class="filter-input-row">
                             <input type="text" id="routeFilter" placeholder="Введите RoutingKey или выберите из списка" list="routeList">
+                            <button type="button" id="routeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="routeReset" class="filter-reset" title="Сбросить RoutingKey" aria-label="Сбросить RoutingKey">×</button>
                         </div>
                         <datalist id="routeList"></datalist>
@@ -288,6 +291,7 @@
                         <label for="queueFilter">Queue:</label>
                         <div class="filter-input-row">
                             <input type="text" id="queueFilter" placeholder="Введите Queue или выберите из списка" list="queueList">
+                            <button type="button" id="queueOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="queueReset" class="filter-reset" title="Сбросить Queue" aria-label="Сбросить Queue">×</button>
                         </div>
                         <datalist id="queueList"></datalist>
@@ -930,6 +934,10 @@
             const exchangeReset = document.getElementById('exchangeReset');
             const routeReset = document.getElementById('routeReset');
             const queueReset = document.getElementById('queueReset');
+            const virtualHostOpen = document.getElementById('virtualHostOpen');
+            const exchangeOpen = document.getElementById('exchangeOpen');
+            const routeOpen = document.getElementById('routeOpen');
+            const queueOpen = document.getElementById('queueOpen');
             
             // Получаем элементы datalist
             const virtualHostList = document.getElementById('virtualHostList');
@@ -1053,6 +1061,23 @@
                 currentFilters.queue = '';
                 updateVisualization();
             };
+
+            // Кнопки открытия списка (фокус + раскрытие подсказок)
+            function openDatalist(inputEl) {
+                inputEl.focus();
+                // триггерим событие ввода, чтобы браузер показал варианты
+                const val = inputEl.value;
+                inputEl.value = '';
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                setTimeout(() => {
+                    inputEl.value = val;
+                    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                }, 0);
+            }
+            virtualHostOpen.onclick = () => openDatalist(newVirtualHostFilter);
+            exchangeOpen.onclick = () => openDatalist(newExchangeFilter);
+            routeOpen.onclick = () => openDatalist(newRouteFilter);
+            queueOpen.onclick = () => openDatalist(newQueueFilter);
             
             // Восстанавливаем сохраненные значения
             if (currentVirtualHost) {
