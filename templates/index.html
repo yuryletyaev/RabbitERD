@@ -180,7 +180,7 @@
                     <span class="value" id="routeCount">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="label">Многопользовательские Route:</span>
+                    <span class="label">Route multiple consumer:</span>
                     <span class="value" id="multiQueueRouteCount">0</span>
                 </div>
             </div>
@@ -192,28 +192,28 @@
                 </div>
                 <div class="filters" id="filters">
                     <div class="filter-group">
-                        <label for="virtualHostFilter">Фильтр по VirtualHost:</label>
-                        <select id="virtualHostFilter">
-                            <option value="">Все VirtualHost</option>
-                        </select>
+                        <label for="virtualHostFilter">VirtualHost:</label>
+                        <input type="text" id="virtualHostFilter" placeholder="Введите VirtualHost или выберите из списка" list="virtualHostList">
+                        <datalist id="virtualHostList">
+                        </datalist>
                     </div>
                     <div class="filter-group">
-                        <label for="exchangeFilter">Фильтр по Exchanges:</label>
-                        <select id="exchangeFilter">
-                            <option value="">Все Exchanges</option>
-                        </select>
+                        <label for="exchangeFilter">Exchange:</label>
+                        <input type="text" id="exchangeFilter" placeholder="Введите Exchange или выберите из списка" list="exchangeList">
+                        <datalist id="exchangeList">
+                        </datalist>
                     </div>
                     <div class="filter-group">
-                        <label for="routeFilter">Фильтр по RoutingKey:</label>
-                        <select id="routeFilter">
-                            <option value="">Все RoutingKey</option>
-                        </select>
+                        <label for="routeFilter">RoutingKey:</label>
+                        <input type="text" id="routeFilter" placeholder="Введите RoutingKey или выберите из списка" list="routeList">
+                        <datalist id="routeList">
+                        </datalist>
                     </div>
                     <div class="filter-group">
-                        <label for="queueFilter">Фильтр по очередям:</label>
-                        <select id="queueFilter">
-                            <option value="">Все очереди</option>
-                        </select>
+                        <label for="queueFilter">Queue:</label>
+                        <input type="text" id="queueFilter" placeholder="Введите Queue или выберите из списка" list="queueList">
+                        <datalist id="queueList">
+                        </datalist>
                     </div>
                 </div>
             </div>
@@ -410,7 +410,7 @@
                 return {
                     virtualHost: vhost,
                     exchanges: vhostExchanges,
-                    x: 50 + index * 500,
+                    x: 0, // Будет пересчитано в drawVirtualHostBlocks
                     y: 50
                 };
             });
@@ -483,18 +483,10 @@
         // Рисование блоков VirtualHost
         function drawVirtualHostBlocks(blocks) {
             try {
-                const virtualHostGroups = g.append('g')
-                    .attr('class', 'virtualhost-blocks')
-                    .selectAll('g')
-                    .data(blocks)
-                    .enter().append('g')
-                    .attr('class', 'virtualhost-block')
-                    .attr('transform', d => `translate(${d.x}, ${d.y})`);
+                // Сначала рассчитываем размеры всех блоков и их позиции
+                let currentX = 50; // Начальная позиция
                 
-                // Рассчитываем размеры блока VirtualHost динамически
                 blocks.forEach((block, blockIndex) => {
-                    const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
-                    
                     // Рассчитываем высоту на основе содержимого (максимальная высота среди всех exchanges)
                     let maxHeight = 80; // Заголовок + отступы
                     let totalWidth = 40; // Отступы
@@ -527,24 +519,39 @@
                         totalWidth += exchangeWidth + 20; // Ширина exchange + отступ
                     });
                     
+                    // Устанавливаем позицию и размеры блока
+                    block.x = currentX;
+                    block.y = 50;
+                    block.width = totalWidth;
+                    block.height = maxHeight;
+                    
+                    // Переходим к следующему блоку
+                    currentX += totalWidth + 50; // Ширина блока + отступ
+                });
+                
+                // Теперь создаем SVG элементы
+                const virtualHostGroups = g.append('g')
+                    .attr('class', 'virtualhost-blocks')
+                    .selectAll('g')
+                    .data(blocks)
+                    .enter().append('g')
+                    .attr('class', 'virtualhost-block')
+                    .attr('transform', d => `translate(${d.x}, ${d.y})`);
+                
+                // Рисуем блоки VirtualHost
+                blocks.forEach((block, blockIndex) => {
+                    const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
+                    
                     // Рисуем основной блок VirtualHost с рассчитанными размерами
                     currentVirtualHostGroup.append('rect')
-                        .attr('width', totalWidth)
-                        .attr('height', maxHeight)
+                        .attr('width', block.width)
+                        .attr('height', block.height)
                         .attr('rx', 15)
                         .attr('fill', config.colors.virtualHost)
                         .attr('stroke', '#333')
                         .attr('stroke-width', 3);
                     
-                    // Обновляем размеры блока в данных
-                    block.width = totalWidth;
-                    block.height = maxHeight;
-                });
-                
-                // Заголовок VirtualHost для каждого блока отдельно
-                blocks.forEach((block, blockIndex) => {
-                    const currentVirtualHostGroup = virtualHostGroups.filter(d => d === block);
-                    
+                    // Заголовок VirtualHost
                     currentVirtualHostGroup.append('text')
                         .attr('x', block.width / 2)
                         .attr('y', 30)
@@ -561,7 +568,7 @@
                     let exchangeX = 20;
                     
                     block.exchanges.forEach((exchangeData, exchangeIndex) => {
-                        // Рассчитываем размеры exchange на основе содержимого
+                        // Используем уже рассчитанные размеры из первого прохода
                         let exchangeWidth = 200; // Минимальная ширина
                         let exchangeHeight = 50; // Высота заголовка
                         
@@ -786,19 +793,25 @@
             const routeFilter = document.getElementById('routeFilter');
             const queueFilter = document.getElementById('queueFilter');
             
+            // Получаем элементы datalist
+            const virtualHostList = document.getElementById('virtualHostList');
+            const exchangeList = document.getElementById('exchangeList');
+            const routeList = document.getElementById('routeList');
+            const queueList = document.getElementById('queueList');
+            
             // Сохраняем текущие значения фильтров
             const currentVirtualHost = virtualHostFilter.value;
             const currentExchange = exchangeFilter.value;
             const currentRoute = routeFilter.value;
             const currentQueue = queueFilter.value;
             
-            // Очищаем опции
-            virtualHostFilter.innerHTML = '<option value="">Все VirtualHost</option>';
-            exchangeFilter.innerHTML = '<option value="">Все Exchanges</option>';
-            routeFilter.innerHTML = '<option value="">Все RoutingKey</option>';
-            queueFilter.innerHTML = '<option value="">Все очереди</option>';
+            // Очищаем datalist
+            virtualHostList.innerHTML = '';
+            exchangeList.innerHTML = '';
+            routeList.innerHTML = '';
+            queueList.innerHTML = '';
             
-            // Заполняем фильтр VirtualHost
+            // Заполняем datalist VirtualHost
             const virtualHosts = new Set();
             exchanges.forEach(exchange => {
                 virtualHosts.add(exchange.vhost || '/');
@@ -809,27 +822,24 @@
             virtualHosts.forEach(vhost => {
                 const option = document.createElement('option');
                 option.value = vhost;
-                option.textContent = vhost;
-                virtualHostFilter.appendChild(option);
+                virtualHostList.appendChild(option);
             });
             
-            // Заполняем фильтр обменов
+            // Заполняем datalist обменов
             exchanges.forEach(exchange => {
                 const option = document.createElement('option');
                 option.value = exchange.name;
-                option.textContent = exchange.name;
-                exchangeFilter.appendChild(option);
+                exchangeList.appendChild(option);
             });
             
-            // Заполняем фильтр очередей
+            // Заполняем datalist очередей
             queues.forEach(queue => {
                 const option = document.createElement('option');
                 option.value = queue.name;
-                option.textContent = queue.name;
-                queueFilter.appendChild(option);
+                queueList.appendChild(option);
             });
             
-            // Заполняем фильтр роутов
+            // Заполняем datalist роутов
             const routes = new Set();
             bindings.forEach(binding => {
                 if (binding.routing_key) {
@@ -839,30 +849,29 @@
             routes.forEach(route => {
                 const option = document.createElement('option');
                 option.value = route;
-                option.textContent = route;
-                routeFilter.appendChild(option);
+                routeList.appendChild(option);
             });
             
             // Обработчики фильтров
-            virtualHostFilter.addEventListener('change', (e) => {
+            virtualHostFilter.addEventListener('input', (e) => {
                 currentFilters.virtualHost = e.target.value;
                 console.log('Фильтр VirtualHost изменен на:', e.target.value);
                 updateVisualization();
             });
             
-            exchangeFilter.addEventListener('change', (e) => {
+            exchangeFilter.addEventListener('input', (e) => {
                 currentFilters.exchange = e.target.value;
                 console.log('Фильтр Exchange изменен на:', e.target.value);
                 updateVisualization();
             });
             
-            routeFilter.addEventListener('change', (e) => {
+            routeFilter.addEventListener('input', (e) => {
                 currentFilters.route = e.target.value;
                 console.log('Фильтр Route изменен на:', e.target.value);
                 updateVisualization();
             });
             
-            queueFilter.addEventListener('change', (e) => {
+            queueFilter.addEventListener('input', (e) => {
                 currentFilters.queue = e.target.value;
                 console.log('Фильтр Queue изменен на:', e.target.value);
                 updateVisualization();

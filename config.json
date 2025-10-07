@@ -8,7 +8,7 @@
     "management_port": 15672
   },
   "app": {
-    "title": "RabbitMQ ERD Visualizer",
+    "title": "RabbitMQ Visualizer",
     "description": "Визуализация топологии RabbitMQ в виде блок-схем",
     "version": "1.0.0"
   },
