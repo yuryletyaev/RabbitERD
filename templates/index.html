@@ -42,10 +42,13 @@
             font-size: 14px;
             box-sizing: border-box;
             width: 220px;
-            /* Скрываем встроенную стрелку datalist */
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
+            /* Полностью скрываем datalist */
+            list-style: none;
+        }
+        
+        /* Скрываем datalist полностью */
+        .filters datalist {
+            display: none !important;
         }
 
         .filter-group {
@@ -77,6 +80,35 @@
 
         .filter-reset:hover, .filter-open:hover {
             background: #f0f0f0;
+        }
+        
+        /* Кастомный выпадающий список */
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .custom-dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .custom-dropdown-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .custom-dropdown-item:last-child {
+            border-bottom: none;
         }
         .stats-container {
             margin: 10px 0;
@@ -267,38 +299,38 @@
                     <div class="filter-group">
                         <label for="virtualHostFilter">VirtualHost:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="virtualHostFilter" placeholder="Введите VirtualHost или выберите из списка" list="virtualHostList">
+                            <input type="text" id="virtualHostFilter" placeholder="Введите VirtualHost или выберите из списка">
                             <button type="button" id="virtualHostOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="virtualHostReset" class="filter-reset" title="Сбросить VirtualHost" aria-label="Сбросить VirtualHost">×</button>
                         </div>
-                        <datalist id="virtualHostList"></datalist>
+                        <div class="custom-dropdown" id="virtualHostDropdown" style="display: none;"></div>
                     </div>
                     <div class="filter-group">
                         <label for="exchangeFilter">Exchange:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="exchangeFilter" placeholder="Введите Exchange или выберите из списка" list="exchangeList">
+                            <input type="text" id="exchangeFilter" placeholder="Введите Exchange или выберите из списка">
                             <button type="button" id="exchangeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="exchangeReset" class="filter-reset" title="Сбросить Exchange" aria-label="Сбросить Exchange">×</button>
                         </div>
-                        <datalist id="exchangeList"></datalist>
+                        <div class="custom-dropdown" id="exchangeDropdown" style="display: none;"></div>
                     </div>
                     <div class="filter-group">
                         <label for="routeFilter">RoutingKey:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="routeFilter" placeholder="Введите RoutingKey или выберите из списка" list="routeList">
+                            <input type="text" id="routeFilter" placeholder="Введите RoutingKey или выберите из списка">
                             <button type="button" id="routeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="routeReset" class="filter-reset" title="Сбросить RoutingKey" aria-label="Сбросить RoutingKey">×</button>
                         </div>
-                        <datalist id="routeList"></datalist>
+                        <div class="custom-dropdown" id="routeDropdown" style="display: none;"></div>
                     </div>
                     <div class="filter-group">
                         <label for="queueFilter">Queue:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="queueFilter" placeholder="Введите Queue или выберите из списка" list="queueList">
+                            <input type="text" id="queueFilter" placeholder="Введите Queue или выберите из списка">
                             <button type="button" id="queueOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="queueReset" class="filter-reset" title="Сбросить Queue" aria-label="Сбросить Queue">×</button>
                         </div>
-                        <datalist id="queueList"></datalist>
+                        <div class="custom-dropdown" id="queueDropdown" style="display: none;"></div>
                     </div>
                 </div>
             </div>
@@ -961,7 +993,7 @@
             routeList.innerHTML = '';
             queueList.innerHTML = '';
             
-            // Заполняем datalist VirtualHost
+            // Заполняем кастомные выпадающие списки
             const virtualHosts = new Set();
             exchanges.forEach(exchange => {
                 virtualHosts.add(exchange.vhost || '/');
@@ -969,27 +1001,58 @@
             queues.forEach(queue => {
                 virtualHosts.add(queue.vhost || '/');
             });
+            
+            // VirtualHost dropdown
+            const virtualHostDropdown = document.getElementById('virtualHostDropdown');
+            virtualHostDropdown.innerHTML = '';
             virtualHosts.forEach(vhost => {
-                const option = document.createElement('option');
-                option.value = vhost;
-                virtualHostList.appendChild(option);
+                const item = document.createElement('div');
+                item.className = 'custom-dropdown-item';
+                item.textContent = vhost;
+                item.onclick = () => {
+                    newVirtualHostFilter.value = vhost;
+                    currentFilters.virtualHost = vhost;
+                    virtualHostDropdown.style.display = 'none';
+                    updateVisualization();
+                };
+                virtualHostDropdown.appendChild(item);
             });
             
-            // Заполняем datalist обменов
+            // Exchange dropdown
+            const exchangeDropdown = document.getElementById('exchangeDropdown');
+            exchangeDropdown.innerHTML = '';
             exchanges.forEach(exchange => {
-                const option = document.createElement('option');
-                option.value = exchange.name;
-                exchangeList.appendChild(option);
+                const item = document.createElement('div');
+                item.className = 'custom-dropdown-item';
+                item.textContent = exchange.name;
+                item.onclick = () => {
+                    newExchangeFilter.value = exchange.name;
+                    currentFilters.exchange = exchange.name;
+                    exchangeDropdown.style.display = 'none';
+                    updateVisualization();
+                };
+                exchangeDropdown.appendChild(item);
             });
             
-            // Заполняем datalist очередей
+            // Queue dropdown
+            const queueDropdown = document.getElementById('queueDropdown');
+            queueDropdown.innerHTML = '';
             queues.forEach(queue => {
-                const option = document.createElement('option');
-                option.value = queue.name;
-                queueList.appendChild(option);
+                const item = document.createElement('div');
+                item.className = 'custom-dropdown-item';
+                item.textContent = queue.name;
+                item.onclick = () => {
+                    newQueueFilter.value = queue.name;
+                    currentFilters.queue = queue.name;
+                    queueDropdown.style.display = 'none';
+                    updateVisualization();
+                };
+                queueDropdown.appendChild(item);
             });
             
-            // Заполняем datalist роутов
+            // Route dropdown
+            const routeDropdown = document.getElementById('routeDropdown');
+            routeDropdown.innerHTML = '';
             const routes = new Set();
             bindings.forEach(binding => {
                 if (binding.routing_key) {
@@ -997,9 +1060,16 @@
                 }
             });
             routes.forEach(route => {
-                const option = document.createElement('option');
-                option.value = route;
-                routeList.appendChild(option);
+                const item = document.createElement('div');
+                item.className = 'custom-dropdown-item';
+                item.textContent = route;
+                item.onclick = () => {
+                    newRouteFilter.value = route;
+                    currentFilters.route = route;
+                    routeDropdown.style.display = 'none';
+                    updateVisualization();
+                };
+                routeDropdown.appendChild(item);
             });
             
             // Удаляем старые обработчики событий
@@ -1066,44 +1136,27 @@
                 updateVisualization();
             };
 
-            // Кнопки открытия списка (фокус + раскрытие подсказок)
-            function openDatalist(inputEl) {
+            // Кнопки открытия списка (кастомный выпадающий список)
+            function openCustomDropdown(inputEl, dropdownId) {
                 try {
-                    // Фокусируем поле
-                    inputEl.focus();
+                    const dropdown = document.getElementById(dropdownId);
+                    if (!dropdown) return;
                     
-                    // Создаем событие click для принудительного открытия datalist
-                    const clickEvent = new MouseEvent('click', {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window
-                    });
-                    inputEl.dispatchEvent(clickEvent);
-                    
-                    // Дополнительно создаем событие focus
-                    const focusEvent = new FocusEvent('focus', {
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    inputEl.dispatchEvent(focusEvent);
-                    
-                    // И событие input для показа всех вариантов
-                    const inputEvent = new Event('input', {
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    inputEl.dispatchEvent(inputEvent);
-                    
+                    // Переключаем видимость
+                    if (dropdown.style.display === 'none') {
+                        dropdown.style.display = 'block';
+                        inputEl.focus();
+                    } else {
+                        dropdown.style.display = 'none';
+                    }
                 } catch (error) {
                     console.error('Ошибка при открытии списка:', error);
-                    // Fallback: просто фокус
-                    inputEl.focus();
                 }
             }
-            virtualHostOpen.onclick = () => openDatalist(newVirtualHostFilter);
-            exchangeOpen.onclick = () => openDatalist(newExchangeFilter);
-            routeOpen.onclick = () => openDatalist(newRouteFilter);
-            queueOpen.onclick = () => openDatalist(newQueueFilter);
+            virtualHostOpen.onclick = () => openCustomDropdown(newVirtualHostFilter, 'virtualHostDropdown');
+            exchangeOpen.onclick = () => openCustomDropdown(newExchangeFilter, 'exchangeDropdown');
+            routeOpen.onclick = () => openCustomDropdown(newRouteFilter, 'routeDropdown');
+            queueOpen.onclick = () => openCustomDropdown(newQueueFilter, 'queueDropdown');
             
             // Восстанавливаем сохраненные значения
             if (currentVirtualHost) {
