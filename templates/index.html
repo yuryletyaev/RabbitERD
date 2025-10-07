@@ -981,15 +981,23 @@
                     });
                 });
                 
-                // Подсчитываем Route multiple consumer (routing_key с несколькими очередями)
+                // Подсчитываем Route multiple consumer из реально отображаемых данных
                 const routeQueueCount = {};
-                filteredBindings.forEach(binding => {
-                    if (binding.destination_type === 'queue' && binding.routing_key) {
-                        const routeKey = binding.routing_key;
-                        routeQueueCount[routeKey] = (routeQueueCount[routeKey] || 0) + 1;
-                    }
+                filteredBlocks.forEach(block => {
+                    block.exchanges.forEach(exchange => {
+                        exchange.routes.forEach(route => {
+                            if (route.queues.length > 1) {
+                                routeQueueCount[route.name] = route.queues.length;
+                            }
+                        });
+                    });
                 });
-                const multiQueueRoutes = Object.values(routeQueueCount).filter(count => count > 1).length;
+                const multiQueueRoutes = Object.keys(routeQueueCount).length;
+                
+                console.log('Route multiple consumer - детали:', {
+                    routeQueueCount: routeQueueCount,
+                    multiQueueRoutes: multiQueueRoutes
+                });
                 
                 console.log('Статистика - результаты подсчета:', {
                     virtualHosts: virtualHosts.size,
@@ -1137,22 +1145,17 @@
             });
             }
             
-            // Удаляем старые обработчики событий
-            const oldVirtualHostFilter = virtualHostFilter.cloneNode(true);
-            const oldExchangeFilter = exchangeFilter.cloneNode(true);
-            const oldRouteFilter = routeFilter.cloneNode(true);
-            const oldQueueFilter = queueFilter.cloneNode(true);
-            
-            virtualHostFilter.parentNode.replaceChild(oldVirtualHostFilter, virtualHostFilter);
-            exchangeFilter.parentNode.replaceChild(oldExchangeFilter, exchangeFilter);
-            routeFilter.parentNode.replaceChild(oldRouteFilter, routeFilter);
-            queueFilter.parentNode.replaceChild(oldQueueFilter, queueFilter);
-            
-            // Получаем новые элементы после замены
+            // Просто получаем элементы без замены
             const newVirtualHostFilter = document.getElementById('virtualHostFilter');
             const newExchangeFilter = document.getElementById('exchangeFilter');
             const newRouteFilter = document.getElementById('routeFilter');
             const newQueueFilter = document.getElementById('queueFilter');
+            
+            // Проверяем, что элементы существуют
+            if (!newVirtualHostFilter || !newExchangeFilter || !newRouteFilter || !newQueueFilter) {
+                console.error('Не удалось найти элементы фильтров');
+                return;
+            }
             
             // Debounce функция для обновления после окончания ввода
             let updateTimeout;
@@ -1163,7 +1166,9 @@
                 }, 500); // Увеличиваем задержку до 500ms для более комфортного ввода
             }
             
-            // Обработчики фильтров (одноразовые, без накопления)
+            // Очищаем старые обработчики и добавляем новые
+            newVirtualHostFilter.oninput = null;
+            newVirtualHostFilter.onblur = null;
             newVirtualHostFilter.oninput = (e) => {
                 currentFilters.virtualHost = e.target.value;
                 debouncedUpdate();
@@ -1173,6 +1178,8 @@
                 updateVisualization();
             };
             
+            newExchangeFilter.oninput = null;
+            newExchangeFilter.onblur = null;
             newExchangeFilter.oninput = (e) => {
                 currentFilters.exchange = e.target.value;
                 debouncedUpdate();
@@ -1182,6 +1189,8 @@
                 updateVisualization();
             };
             
+            newRouteFilter.oninput = null;
+            newRouteFilter.onblur = null;
             newRouteFilter.oninput = (e) => {
                 currentFilters.route = e.target.value;
                 debouncedUpdate();
@@ -1191,6 +1200,8 @@
                 updateVisualization();
             };
             
+            newQueueFilter.oninput = null;
+            newQueueFilter.onblur = null;
             newQueueFilter.oninput = (e) => {
                 currentFilters.queue = e.target.value;
                 debouncedUpdate();
@@ -1200,31 +1211,47 @@
                 updateVisualization();
             };
             
-            // Кнопки сброса (переназначаем обработчики, чтобы не накапливались)
-            virtualHostReset.onclick = null;
-            virtualHostReset.onclick = () => {
-                newVirtualHostFilter.value = '';
-                currentFilters.virtualHost = '';
-                updateVisualization();
-            };
-            exchangeReset.onclick = null;
-            exchangeReset.onclick = () => {
-                newExchangeFilter.value = '';
-                currentFilters.exchange = '';
-                updateVisualization();
-            };
-            routeReset.onclick = null;
-            routeReset.onclick = () => {
-                newRouteFilter.value = '';
-                currentFilters.route = '';
-                updateVisualization();
-            };
-            queueReset.onclick = null;
-            queueReset.onclick = () => {
-                newQueueFilter.value = '';
-                currentFilters.queue = '';
-                updateVisualization();
-            };
+            // Кнопки сброса (очищаем и переназначаем обработчики)
+            const virtualHostReset = document.getElementById('virtualHostReset');
+            const exchangeReset = document.getElementById('exchangeReset');
+            const routeReset = document.getElementById('routeReset');
+            const queueReset = document.getElementById('queueReset');
+            
+            if (virtualHostReset) {
+                virtualHostReset.onclick = null;
+                virtualHostReset.onclick = () => {
+                    newVirtualHostFilter.value = '';
+                    currentFilters.virtualHost = '';
+                    updateVisualization();
+                };
+            }
+            
+            if (exchangeReset) {
+                exchangeReset.onclick = null;
+                exchangeReset.onclick = () => {
+                    newExchangeFilter.value = '';
+                    currentFilters.exchange = '';
+                    updateVisualization();
+                };
+            }
+            
+            if (routeReset) {
+                routeReset.onclick = null;
+                routeReset.onclick = () => {
+                    newRouteFilter.value = '';
+                    currentFilters.route = '';
+                    updateVisualization();
+                };
+            }
+            
+            if (queueReset) {
+                queueReset.onclick = null;
+                queueReset.onclick = () => {
+                    newQueueFilter.value = '';
+                    currentFilters.queue = '';
+                    updateVisualization();
+                };
+            }
 
             // Кнопки открытия списка (кастомный выпадающий список)
             function openCustomDropdown(inputEl, dropdownId) {
@@ -1261,10 +1288,30 @@
                     });
                 }
             });
-            virtualHostOpen.onclick = () => openCustomDropdown(newVirtualHostFilter, 'virtualHostDropdown');
-            exchangeOpen.onclick = () => openCustomDropdown(newExchangeFilter, 'exchangeDropdown');
-            routeOpen.onclick = () => openCustomDropdown(newRouteFilter, 'routeDropdown');
-            queueOpen.onclick = () => openCustomDropdown(newQueueFilter, 'queueDropdown');
+            const virtualHostOpen = document.getElementById('virtualHostOpen');
+            const exchangeOpen = document.getElementById('exchangeOpen');
+            const routeOpen = document.getElementById('routeOpen');
+            const queueOpen = document.getElementById('queueOpen');
+            
+            if (virtualHostOpen) {
+                virtualHostOpen.onclick = null;
+                virtualHostOpen.onclick = () => openCustomDropdown(newVirtualHostFilter, 'virtualHostDropdown');
+            }
+            
+            if (exchangeOpen) {
+                exchangeOpen.onclick = null;
+                exchangeOpen.onclick = () => openCustomDropdown(newExchangeFilter, 'exchangeDropdown');
+            }
+            
+            if (routeOpen) {
+                routeOpen.onclick = null;
+                routeOpen.onclick = () => openCustomDropdown(newRouteFilter, 'routeDropdown');
+            }
+            
+            if (queueOpen) {
+                queueOpen.onclick = null;
+                queueOpen.onclick = () => openCustomDropdown(newQueueFilter, 'queueDropdown');
+            }
             
             // Восстанавливаем сохраненные значения
             if (currentVirtualHost) {
