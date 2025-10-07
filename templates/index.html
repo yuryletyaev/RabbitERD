@@ -743,28 +743,65 @@
                 const queues = topology.queues || [];
                 const bindings = topology.bindings || [];
                 
-                // Подсчитываем уникальные VirtualHost
+                // Применяем фильтры к данным для статистики
+                const filteredExchanges = exchanges.filter(exchange => {
+                    if (currentFilters.virtualHost && exchange.vhost !== currentFilters.virtualHost) {
+                        return false;
+                    }
+                    if (currentFilters.exchange && exchange.name !== currentFilters.exchange) {
+                        return false;
+                    }
+                    return true;
+                });
+                
+                const filteredQueues = queues.filter(queue => {
+                    if (currentFilters.virtualHost && queue.vhost !== currentFilters.virtualHost) {
+                        return false;
+                    }
+                    if (currentFilters.queue && queue.name !== currentFilters.queue) {
+                        return false;
+                    }
+                    return true;
+                });
+                
+                const filteredBindings = bindings.filter(binding => {
+                    if (currentFilters.virtualHost && binding.vhost !== currentFilters.virtualHost) {
+                        return false;
+                    }
+                    if (currentFilters.exchange && binding.source !== currentFilters.exchange) {
+                        return false;
+                    }
+                    if (currentFilters.route && binding.routing_key !== currentFilters.route) {
+                        return false;
+                    }
+                    if (currentFilters.queue && binding.destination !== currentFilters.queue) {
+                        return false;
+                    }
+                    return true;
+                });
+                
+                // Подсчитываем уникальные VirtualHost из отфильтрованных данных
                 const virtualHosts = new Set();
-                exchanges.forEach(exchange => {
+                filteredExchanges.forEach(exchange => {
                     virtualHosts.add(exchange.vhost || '/');
                 });
-                queues.forEach(queue => {
+                filteredQueues.forEach(queue => {
                     virtualHosts.add(queue.vhost || '/');
                 });
                 
-                // Подсчитываем Route (уникальные комбинации exchange + routing_key)
+                // Подсчитываем Route (уникальные routing_key из отфильтрованных bindings)
                 const routes = new Set();
-                bindings.forEach(binding => {
-                    if (binding.destination_type === 'queue') {
-                        routes.add(`${binding.source}:${binding.routing_key}`);
+                filteredBindings.forEach(binding => {
+                    if (binding.destination_type === 'queue' && binding.routing_key) {
+                        routes.add(binding.routing_key);
                     }
                 });
                 
-                // Подсчитываем многопользовательские Route (Route с несколькими Queue)
+                // Подсчитываем многопользовательские Route (routing_key с несколькими queue)
                 const routeQueueCount = {};
-                bindings.forEach(binding => {
-                    if (binding.destination_type === 'queue') {
-                        const routeKey = `${binding.source}:${binding.routing_key}`;
+                filteredBindings.forEach(binding => {
+                    if (binding.destination_type === 'queue' && binding.routing_key) {
+                        const routeKey = binding.routing_key;
                         routeQueueCount[routeKey] = (routeQueueCount[routeKey] || 0) + 1;
                     }
                 });
@@ -772,8 +809,8 @@
                 
                 // Обновляем элементы статистики
                 document.getElementById('virtualHostCount').textContent = virtualHosts.size;
-                document.getElementById('exchangeCount').textContent = exchanges.length;
-                document.getElementById('queueCount').textContent = queues.length;
+                document.getElementById('exchangeCount').textContent = filteredExchanges.length;
+                document.getElementById('queueCount').textContent = filteredQueues.length;
                 document.getElementById('routeCount').textContent = routes.size;
                 document.getElementById('multiQueueRouteCount').textContent = multiQueueRoutes;
                 
@@ -853,26 +890,38 @@
                 routeList.appendChild(option);
             });
             
+            // Удаляем старые обработчики событий
+            virtualHostFilter.replaceWith(virtualHostFilter.cloneNode(true));
+            exchangeFilter.replaceWith(exchangeFilter.cloneNode(true));
+            routeFilter.replaceWith(routeFilter.cloneNode(true));
+            queueFilter.replaceWith(queueFilter.cloneNode(true));
+            
+            // Получаем новые элементы после замены
+            const newVirtualHostFilter = document.getElementById('virtualHostFilter');
+            const newExchangeFilter = document.getElementById('exchangeFilter');
+            const newRouteFilter = document.getElementById('routeFilter');
+            const newQueueFilter = document.getElementById('queueFilter');
+            
             // Обработчики фильтров
-            virtualHostFilter.addEventListener('input', (e) => {
+            newVirtualHostFilter.addEventListener('input', (e) => {
                 currentFilters.virtualHost = e.target.value;
                 console.log('Фильтр VirtualHost изменен на:', e.target.value);
                 updateVisualization();
             });
             
-            exchangeFilter.addEventListener('input', (e) => {
+            newExchangeFilter.addEventListener('input', (e) => {
                 currentFilters.exchange = e.target.value;
                 console.log('Фильтр Exchange изменен на:', e.target.value);
                 updateVisualization();
             });
             
-            routeFilter.addEventListener('input', (e) => {
+            newRouteFilter.addEventListener('input', (e) => {
                 currentFilters.route = e.target.value;
                 console.log('Фильтр Route изменен на:', e.target.value);
                 updateVisualization();
             });
             
-            queueFilter.addEventListener('input', (e) => {
+            newQueueFilter.addEventListener('input', (e) => {
                 currentFilters.queue = e.target.value;
                 console.log('Фильтр Queue изменен на:', e.target.value);
                 updateVisualization();
@@ -880,19 +929,19 @@
             
             // Восстанавливаем сохраненные значения
             if (currentVirtualHost) {
-                virtualHostFilter.value = currentVirtualHost;
+                newVirtualHostFilter.value = currentVirtualHost;
                 currentFilters.virtualHost = currentVirtualHost;
             }
             if (currentExchange) {
-                exchangeFilter.value = currentExchange;
+                newExchangeFilter.value = currentExchange;
                 currentFilters.exchange = currentExchange;
             }
             if (currentRoute) {
-                routeFilter.value = currentRoute;
+                newRouteFilter.value = currentRoute;
                 currentFilters.route = currentRoute;
             }
             if (currentQueue) {
-                queueFilter.value = currentQueue;
+                newQueueFilter.value = currentQueue;
                 currentFilters.queue = currentQueue;
             }
         }
