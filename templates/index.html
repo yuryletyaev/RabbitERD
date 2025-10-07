@@ -163,6 +163,8 @@
         .filters.collapsed {
             max-height: 0;
             margin: 0;
+            padding-top: 0;
+            padding-bottom: 0;
             opacity: 0;
         }
         
@@ -1005,52 +1007,52 @@
             const newRouteFilter = document.getElementById('routeFilter');
             const newQueueFilter = document.getElementById('queueFilter');
             
-            // Обработчики фильтров
-            newVirtualHostFilter.addEventListener('input', (e) => {
+            // Обработчики фильтров (одноразовые, без накопления)
+            newVirtualHostFilter.oninput = (e) => {
                 currentFilters.virtualHost = e.target.value;
-                console.log('Фильтр VirtualHost изменен на:', e.target.value);
                 updateVisualization();
-            });
+            };
             
-            newExchangeFilter.addEventListener('input', (e) => {
+            newExchangeFilter.oninput = (e) => {
                 currentFilters.exchange = e.target.value;
-                console.log('Фильтр Exchange изменен на:', e.target.value);
                 updateVisualization();
-            });
+            };
             
-            newRouteFilter.addEventListener('input', (e) => {
+            newRouteFilter.oninput = (e) => {
                 currentFilters.route = e.target.value;
-                console.log('Фильтр Route изменен на:', e.target.value);
                 updateVisualization();
-            });
+            };
             
-            newQueueFilter.addEventListener('input', (e) => {
+            newQueueFilter.oninput = (e) => {
                 currentFilters.queue = e.target.value;
-                console.log('Фильтр Queue изменен на:', e.target.value);
                 updateVisualization();
-            });
-
-            // Кнопки сброса
-            virtualHostReset.addEventListener('click', () => {
+            };
+            
+            // Кнопки сброса (переназначаем обработчики, чтобы не накапливались)
+            virtualHostReset.onclick = null;
+            virtualHostReset.onclick = () => {
                 newVirtualHostFilter.value = '';
                 currentFilters.virtualHost = '';
                 updateVisualization();
-            });
-            exchangeReset.addEventListener('click', () => {
+            };
+            exchangeReset.onclick = null;
+            exchangeReset.onclick = () => {
                 newExchangeFilter.value = '';
                 currentFilters.exchange = '';
                 updateVisualization();
-            });
-            routeReset.addEventListener('click', () => {
+            };
+            routeReset.onclick = null;
+            routeReset.onclick = () => {
                 newRouteFilter.value = '';
                 currentFilters.route = '';
                 updateVisualization();
-            });
-            queueReset.addEventListener('click', () => {
+            };
+            queueReset.onclick = null;
+            queueReset.onclick = () => {
                 newQueueFilter.value = '';
                 currentFilters.queue = '';
                 updateVisualization();
-            });
+            };
             
             // Восстанавливаем сохраненные значения
             if (currentVirtualHost) {
