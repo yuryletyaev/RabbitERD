@@ -933,16 +933,34 @@
                     virtualHosts.add(queue.vhost || '/');
                 });
                 
-                // Считаем общее количество Exchange (включая повторения в разных VirtualHost)
-                const totalExchanges = filteredExchanges.length;
+                // Считаем количество Exchange, которые реально отображаются в диаграмме
+                let totalExchanges = 0;
+                filteredBlocks.forEach(block => {
+                    totalExchanges += block.exchanges.length;
+                });
                 
-                // Считаем общее количество Queue (включая повторения в разных VirtualHost)
-                const totalQueues = filteredQueues.length;
+                // Считаем количество Queue, которые реально отображаются в диаграмме
+                // Создаем структуру данных как в диаграмме
+                const virtualHostBlocks = createVirtualHostBlocks(filteredExchanges, filteredQueues, filteredBindings);
+                const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
                 
-                // Считаем общее количество Route (включая повторения в разных VirtualHost)
-                const totalRoutes = filteredBindings.filter(binding => 
-                    binding.destination_type === 'queue' && binding.routing_key
-                ).length;
+                // Подсчитываем очереди из отфильтрованных блоков
+                let totalQueues = 0;
+                filteredBlocks.forEach(block => {
+                    block.exchanges.forEach(exchange => {
+                        exchange.routes.forEach(route => {
+                            totalQueues += route.queues.length;
+                        });
+                    });
+                });
+                
+                // Считаем количество Route, которые реально отображаются в диаграмме
+                let totalRoutes = 0;
+                filteredBlocks.forEach(block => {
+                    block.exchanges.forEach(exchange => {
+                        totalRoutes += exchange.routes.length;
+                    });
+                });
                 
                 // Подсчитываем Route multiple consumer (routing_key с несколькими очередями)
                 const routeQueueCount = {};
@@ -1109,25 +1127,34 @@
             const newRouteFilter = document.getElementById('routeFilter');
             const newQueueFilter = document.getElementById('queueFilter');
             
+            // Debounce функция для задержки обновления
+            let updateTimeout;
+            function debouncedUpdate() {
+                clearTimeout(updateTimeout);
+                updateTimeout = setTimeout(() => {
+                    updateVisualization();
+                }, 300);
+            }
+            
             // Обработчики фильтров (одноразовые, без накопления)
             newVirtualHostFilter.oninput = (e) => {
                 currentFilters.virtualHost = e.target.value;
-                updateVisualization();
+                debouncedUpdate();
             };
             
             newExchangeFilter.oninput = (e) => {
                 currentFilters.exchange = e.target.value;
-                updateVisualization();
+                debouncedUpdate();
             };
             
             newRouteFilter.oninput = (e) => {
                 currentFilters.route = e.target.value;
-                updateVisualization();
+                debouncedUpdate();
             };
             
             newQueueFilter.oninput = (e) => {
                 currentFilters.queue = e.target.value;
-                updateVisualization();
+                debouncedUpdate();
             };
             
             // Кнопки сброса (переназначаем обработчики, чтобы не накапливались)
