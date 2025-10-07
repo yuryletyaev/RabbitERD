@@ -1012,11 +1012,16 @@
             const currentRoute = routeFilter.value;
             const currentQueue = queueFilter.value;
             
-            // Очищаем datalist
-            virtualHostList.innerHTML = '';
-            exchangeList.innerHTML = '';
-            routeList.innerHTML = '';
-            queueList.innerHTML = '';
+            // Очищаем кастомные выпадающие списки
+            const virtualHostDropdown = document.getElementById('virtualHostDropdown');
+            const exchangeDropdown = document.getElementById('exchangeDropdown');
+            const routeDropdown = document.getElementById('routeDropdown');
+            const queueDropdown = document.getElementById('queueDropdown');
+            
+            if (virtualHostDropdown) virtualHostDropdown.innerHTML = '';
+            if (exchangeDropdown) exchangeDropdown.innerHTML = '';
+            if (routeDropdown) routeDropdown.innerHTML = '';
+            if (queueDropdown) queueDropdown.innerHTML = '';
             
             // Заполняем кастомные выпадающие списки
             const virtualHosts = new Set();
@@ -1027,9 +1032,9 @@
                 virtualHosts.add(queue.vhost || '/');
             });
             
-            // VirtualHost dropdown
-            const virtualHostDropdown = document.getElementById('virtualHostDropdown');
-            virtualHostDropdown.innerHTML = '';
+            // VirtualHost dropdown (уже получен выше)
+            if (virtualHostDropdown) {
+                virtualHostDropdown.innerHTML = '';
             virtualHosts.forEach(vhost => {
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
@@ -1042,10 +1047,11 @@
                 };
                 virtualHostDropdown.appendChild(item);
             });
+            }
             
-            // Exchange dropdown
-            const exchangeDropdown = document.getElementById('exchangeDropdown');
-            exchangeDropdown.innerHTML = '';
+            // Exchange dropdown (уже получен выше)
+            if (exchangeDropdown) {
+                exchangeDropdown.innerHTML = '';
             exchanges.forEach(exchange => {
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
@@ -1058,10 +1064,11 @@
                 };
                 exchangeDropdown.appendChild(item);
             });
+            }
             
-            // Queue dropdown
-            const queueDropdown = document.getElementById('queueDropdown');
-            queueDropdown.innerHTML = '';
+            // Queue dropdown (уже получен выше)
+            if (queueDropdown) {
+                queueDropdown.innerHTML = '';
             queues.forEach(queue => {
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
@@ -1074,10 +1081,11 @@
                 };
                 queueDropdown.appendChild(item);
             });
+            }
             
-            // Route dropdown
-            const routeDropdown = document.getElementById('routeDropdown');
-            routeDropdown.innerHTML = '';
+            // Route dropdown (уже получен выше)
+            if (routeDropdown) {
+                routeDropdown.innerHTML = '';
             const routes = new Set();
             bindings.forEach(binding => {
                 if (binding.routing_key) {
@@ -1096,6 +1104,7 @@
                 };
                 routeDropdown.appendChild(item);
             });
+            }
             
             // Удаляем старые обработчики событий
             const oldVirtualHostFilter = virtualHostFilter.cloneNode(true);
