@@ -933,6 +933,18 @@
                     virtualHosts.add(queue.vhost || '/');
                 });
                 
+                // Создаем структуру данных как в диаграмме для корректного подсчета
+                const virtualHostBlocks = createVirtualHostBlocks(filteredExchanges, filteredQueues, filteredBindings);
+                const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
+                
+                console.log('Статистика - отфильтрованные данные:', {
+                    exchanges: filteredExchanges.length,
+                    queues: filteredQueues.length,
+                    bindings: filteredBindings.length
+                });
+                console.log('Статистика - созданные блоки:', virtualHostBlocks.length);
+                console.log('Статистика - отфильтрованные блоки:', filteredBlocks.length);
+                
                 // Считаем количество Exchange, которые реально отображаются в диаграмме
                 let totalExchanges = 0;
                 filteredBlocks.forEach(block => {
@@ -940,11 +952,6 @@
                 });
                 
                 // Считаем количество Queue, которые реально отображаются в диаграмме
-                // Создаем структуру данных как в диаграмме
-                const virtualHostBlocks = createVirtualHostBlocks(filteredExchanges, filteredQueues, filteredBindings);
-                const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
-                
-                // Подсчитываем очереди из отфильтрованных блоков
                 let totalQueues = 0;
                 filteredBlocks.forEach(block => {
                     block.exchanges.forEach(exchange => {
@@ -971,6 +978,14 @@
                     }
                 });
                 const multiQueueRoutes = Object.values(routeQueueCount).filter(count => count > 1).length;
+                
+                console.log('Статистика - результаты подсчета:', {
+                    virtualHosts: virtualHosts.size,
+                    exchanges: totalExchanges,
+                    queues: totalQueues,
+                    routes: totalRoutes,
+                    multiQueueRoutes: multiQueueRoutes
+                });
                 
                 // Обновляем элементы статистики
                 document.getElementById('virtualHostCount').textContent = virtualHosts.size;
