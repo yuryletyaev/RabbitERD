@@ -56,6 +56,7 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+            z-index: 1;
         }
 
         .filter-input-row {
@@ -91,10 +92,11 @@
             background: white;
             border: 1px solid #ccc;
             border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 1000;
             max-height: 200px;
             overflow-y: auto;
+            margin-top: 2px;
         }
         
         .custom-dropdown-item {
@@ -160,7 +162,7 @@
             background: #f5f5f5;
             border-radius: 5px;
             border: 1px solid #ddd;
-            overflow: hidden;
+            overflow: visible;
         }
         
         .filters-header {
@@ -193,7 +195,7 @@
             margin: 10px 0;
             flex-wrap: wrap;
             transition: all 0.3s ease;
-            overflow: hidden;
+            overflow: visible;
         }
         
         .filters.collapsed {
@@ -1176,8 +1178,16 @@
                     const dropdown = document.getElementById(dropdownId);
                     if (!dropdown) return;
                     
-                    // Переключаем видимость
-                    if (dropdown.style.display === 'none') {
+                    // Закрываем все другие выпадающие списки
+                    const allDropdowns = document.querySelectorAll('.custom-dropdown');
+                    allDropdowns.forEach(dd => {
+                        if (dd.id !== dropdownId) {
+                            dd.style.display = 'none';
+                        }
+                    });
+                    
+                    // Переключаем видимость текущего списка
+                    if (dropdown.style.display === 'none' || dropdown.style.display === '') {
                         dropdown.style.display = 'block';
                         inputEl.focus();
                     } else {
@@ -1187,6 +1197,16 @@
                     console.error('Ошибка при открытии списка:', error);
                 }
             }
+            
+            // Закрытие выпадающих списков при клике вне их
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('.filter-group')) {
+                    const allDropdowns = document.querySelectorAll('.custom-dropdown');
+                    allDropdowns.forEach(dropdown => {
+                        dropdown.style.display = 'none';
+                    });
+                }
+            });
             virtualHostOpen.onclick = () => openCustomDropdown(newVirtualHostFilter, 'virtualHostDropdown');
             exchangeOpen.onclick = () => openCustomDropdown(newExchangeFilter, 'exchangeDropdown');
             routeOpen.onclick = () => openCustomDropdown(newRouteFilter, 'routeDropdown');
