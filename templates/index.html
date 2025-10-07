@@ -7,6 +7,73 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: #f7f7f7;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        header .controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        header .controls .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        /* Видимость плейсхолдеров и удобство ввода */
+        .filters input[type="text"] {
+            height: 32px;
+            line-height: 20px;
+            padding: 6px 28px 6px 10px; /* запас справа под кнопку сброса */
+            font-size: 14px;
+            box-sizing: border-box;
+            width: 220px;
+        }
+
+        .filter-group {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-input-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-reset {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 1px solid #ccc;
+            background: #fff;
+            color: #666;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .filter-reset:hover {
+            background: #f0f0f0;
+        }
         .stats-container {
             margin: 10px 0;
             background: #f0f8ff;
@@ -149,7 +216,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>RabbitMQ ERD Visualizer</h1>
+            <h1>RabbitMQ Visualizer</h1>
             <div class="controls">
                 <button id="refreshBtn" class="btn">Обновить</button>
                 <button id="zoomInBtn" class="btn">+</button>
@@ -193,27 +260,35 @@
                 <div class="filters" id="filters">
                     <div class="filter-group">
                         <label for="virtualHostFilter">VirtualHost:</label>
-                        <input type="text" id="virtualHostFilter" placeholder="Введите VirtualHost или выберите из списка" list="virtualHostList">
-                        <datalist id="virtualHostList">
-                        </datalist>
+                        <div class="filter-input-row">
+                            <input type="text" id="virtualHostFilter" placeholder="Введите VirtualHost или выберите из списка" list="virtualHostList">
+                            <button type="button" id="virtualHostReset" class="filter-reset" title="Сбросить VirtualHost" aria-label="Сбросить VirtualHost">×</button>
+                        </div>
+                        <datalist id="virtualHostList"></datalist>
                     </div>
                     <div class="filter-group">
                         <label for="exchangeFilter">Exchange:</label>
-                        <input type="text" id="exchangeFilter" placeholder="Введите Exchange или выберите из списка" list="exchangeList">
-                        <datalist id="exchangeList">
-                        </datalist>
+                        <div class="filter-input-row">
+                            <input type="text" id="exchangeFilter" placeholder="Введите Exchange или выберите из списка" list="exchangeList">
+                            <button type="button" id="exchangeReset" class="filter-reset" title="Сбросить Exchange" aria-label="Сбросить Exchange">×</button>
+                        </div>
+                        <datalist id="exchangeList"></datalist>
                     </div>
                     <div class="filter-group">
                         <label for="routeFilter">RoutingKey:</label>
-                        <input type="text" id="routeFilter" placeholder="Введите RoutingKey или выберите из списка" list="routeList">
-                        <datalist id="routeList">
-                        </datalist>
+                        <div class="filter-input-row">
+                            <input type="text" id="routeFilter" placeholder="Введите RoutingKey или выберите из списка" list="routeList">
+                            <button type="button" id="routeReset" class="filter-reset" title="Сбросить RoutingKey" aria-label="Сбросить RoutingKey">×</button>
+                        </div>
+                        <datalist id="routeList"></datalist>
                     </div>
                     <div class="filter-group">
                         <label for="queueFilter">Queue:</label>
-                        <input type="text" id="queueFilter" placeholder="Введите Queue или выберите из списка" list="queueList">
-                        <datalist id="queueList">
-                        </datalist>
+                        <div class="filter-input-row">
+                            <input type="text" id="queueFilter" placeholder="Введите Queue или выберите из списка" list="queueList">
+                            <button type="button" id="queueReset" class="filter-reset" title="Сбросить Queue" aria-label="Сбросить Queue">×</button>
+                        </div>
+                        <datalist id="queueList"></datalist>
                     </div>
                 </div>
             </div>
@@ -789,6 +864,15 @@
                     virtualHosts.add(queue.vhost || '/');
                 });
                 
+                // Находим связанные с bindings exchange и считаем уникальные
+                const exchangeByName = new Map(filteredExchanges.map(ex => [ex.name, ex]));
+                const relatedExchanges = new Set();
+                filteredBindings.forEach(binding => {
+                    if (binding.source && exchangeByName.has(binding.source)) {
+                        relatedExchanges.add(binding.source);
+                    }
+                });
+                
                 // Подсчитываем Route (уникальные routing_key из отфильтрованных bindings)
                 const routes = new Set();
                 filteredBindings.forEach(binding => {
@@ -817,7 +901,9 @@
                 
                 // Обновляем элементы статистики
                 document.getElementById('virtualHostCount').textContent = virtualHosts.size;
-                document.getElementById('exchangeCount').textContent = filteredExchanges.length;
+                // Считаем количество только связанных Exchange, если есть bindings; иначе показываем количество отфильтрованных exchanges
+                const exchangeCount = relatedExchanges.size > 0 ? relatedExchanges.size : filteredExchanges.length;
+                document.getElementById('exchangeCount').textContent = exchangeCount;
                 document.getElementById('queueCount').textContent = uniqueQueues.size;
                 document.getElementById('routeCount').textContent = routes.size;
                 document.getElementById('multiQueueRouteCount').textContent = multiQueueRoutes;
@@ -838,6 +924,10 @@
             const exchangeFilter = document.getElementById('exchangeFilter');
             const routeFilter = document.getElementById('routeFilter');
             const queueFilter = document.getElementById('queueFilter');
+            const virtualHostReset = document.getElementById('virtualHostReset');
+            const exchangeReset = document.getElementById('exchangeReset');
+            const routeReset = document.getElementById('routeReset');
+            const queueReset = document.getElementById('queueReset');
             
             // Получаем элементы datalist
             const virtualHostList = document.getElementById('virtualHostList');
@@ -937,6 +1027,28 @@
             newQueueFilter.addEventListener('input', (e) => {
                 currentFilters.queue = e.target.value;
                 console.log('Фильтр Queue изменен на:', e.target.value);
+                updateVisualization();
+            });
+
+            // Кнопки сброса
+            virtualHostReset.addEventListener('click', () => {
+                newVirtualHostFilter.value = '';
+                currentFilters.virtualHost = '';
+                updateVisualization();
+            });
+            exchangeReset.addEventListener('click', () => {
+                newExchangeFilter.value = '';
+                currentFilters.exchange = '';
+                updateVisualization();
+            });
+            routeReset.addEventListener('click', () => {
+                newRouteFilter.value = '';
+                currentFilters.route = '';
+                updateVisualization();
+            });
+            queueReset.addEventListener('click', () => {
+                newQueueFilter.value = '';
+                currentFilters.queue = '';
                 updateVisualization();
             });
             
