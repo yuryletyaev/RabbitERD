@@ -1212,10 +1212,6 @@
             };
             
             // Кнопки сброса (очищаем и переназначаем обработчики)
-            const virtualHostReset = document.getElementById('virtualHostReset');
-            const exchangeReset = document.getElementById('exchangeReset');
-            const routeReset = document.getElementById('routeReset');
-            const queueReset = document.getElementById('queueReset');
             
             if (virtualHostReset) {
                 virtualHostReset.onclick = null;
@@ -1288,10 +1284,7 @@
                     });
                 }
             });
-            const virtualHostOpen = document.getElementById('virtualHostOpen');
-            const exchangeOpen = document.getElementById('exchangeOpen');
-            const routeOpen = document.getElementById('routeOpen');
-            const queueOpen = document.getElementById('queueOpen');
+            
             
             if (virtualHostOpen) {
                 virtualHostOpen.onclick = null;
