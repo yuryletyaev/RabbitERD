@@ -1064,15 +1064,33 @@
 
             // Кнопки открытия списка (фокус + раскрытие подсказок)
             function openDatalist(inputEl) {
-                inputEl.focus();
-                // триггерим событие ввода, чтобы браузер показал варианты
-                const val = inputEl.value;
-                inputEl.value = '';
-                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-                setTimeout(() => {
-                    inputEl.value = val;
-                    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-                }, 0);
+                try {
+                    inputEl.focus();
+                    // Очищаем поле и триггерим события для показа всех вариантов
+                    const currentValue = inputEl.value;
+                    inputEl.value = '';
+                    
+                    // Создаем событие input для показа всех вариантов
+                    const inputEvent = new Event('input', { 
+                        bubbles: true, 
+                        cancelable: true 
+                    });
+                    inputEl.dispatchEvent(inputEvent);
+                    
+                    // Восстанавливаем значение через небольшую задержку
+                    setTimeout(() => {
+                        inputEl.value = currentValue;
+                        const restoreEvent = new Event('input', { 
+                            bubbles: true, 
+                            cancelable: true 
+                        });
+                        inputEl.dispatchEvent(restoreEvent);
+                    }, 50);
+                } catch (error) {
+                    console.error('Ошибка при открытии списка:', error);
+                    // Fallback: просто фокус
+                    inputEl.focus();
+                }
             }
             virtualHostOpen.onclick = () => openDatalist(newVirtualHostFilter);
             exchangeOpen.onclick = () => openDatalist(newExchangeFilter);
