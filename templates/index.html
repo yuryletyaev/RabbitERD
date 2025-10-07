@@ -443,6 +443,9 @@
                 const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
                 console.log('Отфильтрованные блоки:', filteredBlocks);
                 
+                // Сохраняем блоки для статистики
+                window.currentFilteredBlocks = filteredBlocks;
+                
                 // Рисуем блоки
                 console.log('Рисование блоков...');
                 drawVirtualHostBlocks(filteredBlocks);
@@ -933,21 +936,28 @@
                     virtualHosts.add(queue.vhost || '/');
                 });
                 
-                // Создаем структуру данных как в диаграмме для корректного подсчета
-                const virtualHostBlocks = createVirtualHostBlocks(filteredExchanges, filteredQueues, filteredBindings);
-                const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
+                // Используем те же блоки, что и в диаграмме (передаем их из updateVisualization)
+                // Если блоки не переданы, создаем их заново
+                let filteredBlocks;
+                if (window.currentFilteredBlocks) {
+                    filteredBlocks = window.currentFilteredBlocks;
+                    console.log('Статистика - используем существующие блоки:', filteredBlocks.length);
+                } else {
+                    const virtualHostBlocks = createVirtualHostBlocks(filteredExchanges, filteredQueues, filteredBindings);
+                    filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
+                    console.log('Статистика - создаем новые блоки:', filteredBlocks.length);
+                }
                 
                 console.log('Статистика - отфильтрованные данные:', {
                     exchanges: filteredExchanges.length,
                     queues: filteredQueues.length,
                     bindings: filteredBindings.length
                 });
-                console.log('Статистика - созданные блоки:', virtualHostBlocks.length);
-                console.log('Статистика - отфильтрованные блоки:', filteredBlocks.length);
                 
                 // Считаем количество Exchange, которые реально отображаются в диаграмме
                 let totalExchanges = 0;
                 filteredBlocks.forEach(block => {
+                    console.log('Блок VirtualHost:', block.virtualHost, 'Exchanges:', block.exchanges.length);
                     totalExchanges += block.exchanges.length;
                 });
                 
@@ -955,7 +965,9 @@
                 let totalQueues = 0;
                 filteredBlocks.forEach(block => {
                     block.exchanges.forEach(exchange => {
+                        console.log('Exchange:', exchange.exchange.name, 'Routes:', exchange.routes.length);
                         exchange.routes.forEach(route => {
+                            console.log('Route:', route.name, 'Queues:', route.queues.length);
                             totalQueues += route.queues.length;
                         });
                     });
@@ -1142,13 +1154,13 @@
             const newRouteFilter = document.getElementById('routeFilter');
             const newQueueFilter = document.getElementById('queueFilter');
             
-            // Debounce функция для задержки обновления
+            // Debounce функция для обновления после окончания ввода
             let updateTimeout;
             function debouncedUpdate() {
                 clearTimeout(updateTimeout);
                 updateTimeout = setTimeout(() => {
                     updateVisualization();
-                }, 300);
+                }, 500); // Увеличиваем задержку до 500ms для более комфортного ввода
             }
             
             // Обработчики фильтров (одноразовые, без накопления)
@@ -1156,20 +1168,36 @@
                 currentFilters.virtualHost = e.target.value;
                 debouncedUpdate();
             };
+            newVirtualHostFilter.onblur = () => {
+                clearTimeout(updateTimeout);
+                updateVisualization();
+            };
             
             newExchangeFilter.oninput = (e) => {
                 currentFilters.exchange = e.target.value;
                 debouncedUpdate();
+            };
+            newExchangeFilter.onblur = () => {
+                clearTimeout(updateTimeout);
+                updateVisualization();
             };
             
             newRouteFilter.oninput = (e) => {
                 currentFilters.route = e.target.value;
                 debouncedUpdate();
             };
+            newRouteFilter.onblur = () => {
+                clearTimeout(updateTimeout);
+                updateVisualization();
+            };
             
             newQueueFilter.oninput = (e) => {
                 currentFilters.queue = e.target.value;
                 debouncedUpdate();
+            };
+            newQueueFilter.onblur = () => {
+                clearTimeout(updateTimeout);
+                updateVisualization();
             };
             
             // Кнопки сброса (переназначаем обработчики, чтобы не накапливались)
