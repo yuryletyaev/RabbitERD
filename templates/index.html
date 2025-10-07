@@ -807,10 +807,18 @@
                 });
                 const multiQueueRoutes = Object.values(routeQueueCount).filter(count => count > 1).length;
                 
+                // Подсчитываем уникальные очереди из отфильтрованных bindings
+                const uniqueQueues = new Set();
+                filteredBindings.forEach(binding => {
+                    if (binding.destination_type === 'queue') {
+                        uniqueQueues.add(binding.destination);
+                    }
+                });
+                
                 // Обновляем элементы статистики
                 document.getElementById('virtualHostCount').textContent = virtualHosts.size;
                 document.getElementById('exchangeCount').textContent = filteredExchanges.length;
-                document.getElementById('queueCount').textContent = filteredQueues.length;
+                document.getElementById('queueCount').textContent = uniqueQueues.size;
                 document.getElementById('routeCount').textContent = routes.size;
                 document.getElementById('multiQueueRouteCount').textContent = multiQueueRoutes;
                 
@@ -891,10 +899,15 @@
             });
             
             // Удаляем старые обработчики событий
-            virtualHostFilter.replaceWith(virtualHostFilter.cloneNode(true));
-            exchangeFilter.replaceWith(exchangeFilter.cloneNode(true));
-            routeFilter.replaceWith(routeFilter.cloneNode(true));
-            queueFilter.replaceWith(queueFilter.cloneNode(true));
+            const oldVirtualHostFilter = virtualHostFilter.cloneNode(true);
+            const oldExchangeFilter = exchangeFilter.cloneNode(true);
+            const oldRouteFilter = routeFilter.cloneNode(true);
+            const oldQueueFilter = queueFilter.cloneNode(true);
+            
+            virtualHostFilter.parentNode.replaceChild(oldVirtualHostFilter, virtualHostFilter);
+            exchangeFilter.parentNode.replaceChild(oldExchangeFilter, exchangeFilter);
+            routeFilter.parentNode.replaceChild(oldRouteFilter, routeFilter);
+            queueFilter.parentNode.replaceChild(oldQueueFilter, queueFilter);
             
             // Получаем новые элементы после замены
             const newVirtualHostFilter = document.getElementById('virtualHostFilter');
