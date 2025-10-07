@@ -7,8 +7,57 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
+        .stats-container {
+            margin: 10px 0;
+            background: #f0f8ff;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            overflow: hidden;
+        }
+        
+        .stats-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 10px;
+            background: #e0f0ff;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .stats-header:hover {
+            background: #d0e0ff;
+        }
+        
+        .stats-toggle {
+            font-size: 16px;
+            transition: transform 0.3s ease;
+        }
+        
+        .stats-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            flex-wrap: wrap;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .stats.collapsed {
+            max-height: 0;
+            padding: 0 15px;
+        }
+        
         .filters-container {
             margin: 10px 0;
+            background: #f5f5f5;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            overflow: hidden;
         }
         
         .filters-header {
@@ -17,13 +66,12 @@
             gap: 10px;
             cursor: pointer;
             padding: 10px;
-            background: #f5f5f5;
-            border-radius: 5px;
-            border: 1px solid #ddd;
+            background: #e5e5e5;
+            border-bottom: 1px solid #ddd;
         }
         
         .filters-header:hover {
-            background: #e5e5e5;
+            background: #d5d5d5;
         }
         
         .filters-toggle {
@@ -38,6 +86,7 @@
         .filters {
             display: flex;
             gap: 20px;
+            padding: 15px;
             margin: 10px 0;
             flex-wrap: wrap;
             transition: all 0.3s ease;
@@ -108,21 +157,34 @@
             </div>
         </header>
         
-        <div class="info-panel">
-            <div class="stats">
+        <div class="stats-container">
+            <div class="stats-header" onclick="toggleStats()">
+                <span class="stats-toggle" id="statsToggle">▼</span>
+                <span>Статистика</span>
+            </div>
+            <div class="stats" id="stats">
                 <div class="stat-item">
-                    <span class="label">Обмены:</span>
-                    <span class="value" id="exchangeCount">{{ topology.exchanges|length }}</span>
+                    <span class="label">VirtualHost:</span>
+                    <span class="value" id="virtualHostCount">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="label">Очереди:</span>
-                    <span class="value" id="queueCount">{{ topology.queues|length }}</span>
+                    <span class="label">Exchange:</span>
+                    <span class="value" id="exchangeCount">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="label">Связи:</span>
-                    <span class="value" id="connectionCount">{{ topology.connections|length }}</span>
+                    <span class="label">Queue:</span>
+                    <span class="value" id="queueCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Route:</span>
+                    <span class="value" id="routeCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Многопользовательские Route:</span>
+                    <span class="value" id="multiQueueRouteCount">0</span>
                 </div>
             </div>
+        </div>
             <div class="filters-container">
                 <div class="filters-header" onclick="toggleFilters()">
                     <span class="filters-toggle" id="filtersToggle">▼</span>
@@ -167,9 +229,13 @@
         </div>
     </div>
     
+    <!-- Скрытые данные топологии -->
+    <script type="application/json" id="topologyData">{{ topology | tojson }}</script>
+    
     <script>
         // Данные топологии
-        const topology = {{ topology | tojson }};
+        const topologyData = document.getElementById('topologyData').textContent;
+        const topology = JSON.parse(topologyData);
         
         // Конфигурация
         const config = {
@@ -256,6 +322,9 @@
                 
                 // Настраиваем фильтры после обновления данных
                 setupFilters();
+                
+                // Обновляем статистику
+                updateStats();
                 
             } catch (error) {
                 console.error('Ошибка обновления визуализации:', error);
@@ -556,6 +625,7 @@
                                 .attr('y', 20)
                                 .attr('fill', 'white')
                                 .attr('font-size', '12px')
+                                .attr('style', 'user-select: text; cursor: text;')
                                 .text(`RoutingKey: ${route.name}`);
                             
                             // Очереди
@@ -581,6 +651,7 @@
                                     .attr('y', 16)
                                     .attr('fill', 'white')
                                     .attr('font-size', '10px')
+                                    .attr('style', 'user-select: text; cursor: text;')
                                     .text(queue.name);
                                 
                                 queueY += 30;
@@ -625,6 +696,22 @@
             return `rgb(${red}, ${green}, ${blue})`;
         }
         
+        // Функция для сворачивания статистики
+        function toggleStats() {
+            const stats = document.getElementById('stats');
+            const toggle = document.getElementById('statsToggle');
+            
+            if (stats.classList.contains('collapsed')) {
+                stats.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            } else {
+                stats.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▶';
+            }
+        }
+        
         // Функция для сворачивания фильтров
         function toggleFilters() {
             const filters = document.getElementById('filters');
@@ -638,6 +725,52 @@
                 filters.classList.add('collapsed');
                 toggle.classList.add('collapsed');
                 toggle.textContent = '▶';
+            }
+        }
+        
+        // Обновление статистики
+        function updateStats() {
+            try {
+                const exchanges = topology.exchanges || [];
+                const queues = topology.queues || [];
+                const bindings = topology.bindings || [];
+                
+                // Подсчитываем уникальные VirtualHost
+                const virtualHosts = new Set();
+                exchanges.forEach(exchange => {
+                    virtualHosts.add(exchange.vhost || '/');
+                });
+                queues.forEach(queue => {
+                    virtualHosts.add(queue.vhost || '/');
+                });
+                
+                // Подсчитываем Route (уникальные комбинации exchange + routing_key)
+                const routes = new Set();
+                bindings.forEach(binding => {
+                    if (binding.destination_type === 'queue') {
+                        routes.add(`${binding.source}:${binding.routing_key}`);
+                    }
+                });
+                
+                // Подсчитываем многопользовательские Route (Route с несколькими Queue)
+                const routeQueueCount = {};
+                bindings.forEach(binding => {
+                    if (binding.destination_type === 'queue') {
+                        const routeKey = `${binding.source}:${binding.routing_key}`;
+                        routeQueueCount[routeKey] = (routeQueueCount[routeKey] || 0) + 1;
+                    }
+                });
+                const multiQueueRoutes = Object.values(routeQueueCount).filter(count => count > 1).length;
+                
+                // Обновляем элементы статистики
+                document.getElementById('virtualHostCount').textContent = virtualHosts.size;
+                document.getElementById('exchangeCount').textContent = exchanges.length;
+                document.getElementById('queueCount').textContent = queues.length;
+                document.getElementById('routeCount').textContent = routes.size;
+                document.getElementById('multiQueueRouteCount').textContent = multiQueueRoutes;
+                
+            } catch (error) {
+                console.error('Ошибка обновления статистики:', error);
             }
         }
         

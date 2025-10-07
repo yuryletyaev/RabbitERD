@@ -27,27 +27,77 @@ class RabbitMQClient:
                     raise Exception(f"HTTP {response.status}: {await response.text()}")
     
     async def get_exchanges(self) -> List[Dict[str, Any]]:
-        """Получает список всех обменов"""
+        """Получает список всех обменов по всем vhost"""
         try:
-            exchanges = await self._make_request(f"exchanges/{self.vhost}")
-            # Фильтруем системные обмены
-            return [ex for ex in exchanges if not ex['name'].startswith('amq.')]
+            # Получаем список всех vhost
+            vhosts = await self._make_request("vhosts")
+            all_exchanges = []
+            
+            # Получаем обмены для каждого vhost
+            for vhost in vhosts:
+                vhost_name = vhost['name']
+                try:
+                    exchanges = await self._make_request(f"exchanges/{vhost_name}")
+                    # Фильтруем системные обмены и добавляем информацию о vhost
+                    for ex in exchanges:
+                        if not ex['name'].startswith('amq.'):
+                            ex['vhost'] = vhost_name
+                            all_exchanges.append(ex)
+                except Exception as e:
+                    print(f"Ошибка при получении обменов для vhost {vhost_name}: {e}")
+                    continue
+            
+            return all_exchanges
         except Exception as e:
             print(f"Ошибка при получении обменов: {e}")
             return []
     
     async def get_queues(self) -> List[Dict[str, Any]]:
-        """Получает список всех очередей"""
+        """Получает список всех очередей по всем vhost"""
         try:
-            return await self._make_request(f"queues/{self.vhost}")
+            # Получаем список всех vhost
+            vhosts = await self._make_request("vhosts")
+            all_queues = []
+            
+            # Получаем очереди для каждого vhost
+            for vhost in vhosts:
+                vhost_name = vhost['name']
+                try:
+                    queues = await self._make_request(f"queues/{vhost_name}")
+                    # Добавляем информацию о vhost
+                    for queue in queues:
+                        queue['vhost'] = vhost_name
+                        all_queues.append(queue)
+                except Exception as e:
+                    print(f"Ошибка при получении очередей для vhost {vhost_name}: {e}")
+                    continue
+            
+            return all_queues
         except Exception as e:
             print(f"Ошибка при получении очередей: {e}")
             return []
     
     async def get_bindings(self) -> List[Dict[str, Any]]:
-        """Получает список всех привязок"""
+        """Получает список всех привязок по всем vhost"""
         try:
-            return await self._make_request(f"bindings/{self.vhost}")
+            # Получаем список всех vhost
+            vhosts = await self._make_request("vhosts")
+            all_bindings = []
+            
+            # Получаем привязки для каждого vhost
+            for vhost in vhosts:
+                vhost_name = vhost['name']
+                try:
+                    bindings = await self._make_request(f"bindings/{vhost_name}")
+                    # Добавляем информацию о vhost
+                    for binding in bindings:
+                        binding['vhost'] = vhost_name
+                        all_bindings.append(binding)
+                except Exception as e:
+                    print(f"Ошибка при получении привязок для vhost {vhost_name}: {e}")
+                    continue
+            
+            return all_bindings
         except Exception as e:
             print(f"Ошибка при получении привязок: {e}")
             return []
