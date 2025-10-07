@@ -301,7 +301,7 @@
                     <div class="filter-group">
                         <label for="virtualHostFilter">VirtualHost:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="virtualHostFilter" placeholder="Введите VirtualHost или выберите из списка">
+                            <input type="text" id="virtualHostFilter">
                             <button type="button" id="virtualHostOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="virtualHostReset" class="filter-reset" title="Сбросить VirtualHost" aria-label="Сбросить VirtualHost">×</button>
                         </div>
@@ -310,7 +310,7 @@
                     <div class="filter-group">
                         <label for="exchangeFilter">Exchange:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="exchangeFilter" placeholder="Введите Exchange или выберите из списка">
+                            <input type="text" id="exchangeFilter">
                             <button type="button" id="exchangeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="exchangeReset" class="filter-reset" title="Сбросить Exchange" aria-label="Сбросить Exchange">×</button>
                         </div>
@@ -319,7 +319,7 @@
                     <div class="filter-group">
                         <label for="routeFilter">RoutingKey:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="routeFilter" placeholder="Введите RoutingKey или выберите из списка">
+                            <input type="text" id="routeFilter">
                             <button type="button" id="routeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="routeReset" class="filter-reset" title="Сбросить RoutingKey" aria-label="Сбросить RoutingKey">×</button>
                         </div>
@@ -328,7 +328,7 @@
                     <div class="filter-group">
                         <label for="queueFilter">Queue:</label>
                         <div class="filter-input-row">
-                            <input type="text" id="queueFilter" placeholder="Введите Queue или выберите из списка">
+                            <input type="text" id="queueFilter">
                             <button type="button" id="queueOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="queueReset" class="filter-reset" title="Сбросить Queue" aria-label="Сбросить Queue">×</button>
                         </div>
@@ -933,24 +933,18 @@
                     virtualHosts.add(queue.vhost || '/');
                 });
                 
-                // Находим связанные с bindings exchange и считаем уникальные
-                const exchangeByName = new Map(filteredExchanges.map(ex => [ex.name, ex]));
-                const relatedExchanges = new Set();
-                filteredBindings.forEach(binding => {
-                    if (binding.source && exchangeByName.has(binding.source)) {
-                        relatedExchanges.add(binding.source);
-                    }
-                });
+                // Считаем общее количество Exchange (включая повторения в разных VirtualHost)
+                const totalExchanges = filteredExchanges.length;
                 
-                // Подсчитываем Route (уникальные routing_key из отфильтрованных bindings)
-                const routes = new Set();
-                filteredBindings.forEach(binding => {
-                    if (binding.destination_type === 'queue' && binding.routing_key) {
-                        routes.add(binding.routing_key);
-                    }
-                });
+                // Считаем общее количество Queue (включая повторения в разных VirtualHost)
+                const totalQueues = filteredQueues.length;
                 
-                // Подсчитываем многопользовательские Route (routing_key с несколькими queue)
+                // Считаем общее количество Route (включая повторения в разных VirtualHost)
+                const totalRoutes = filteredBindings.filter(binding => 
+                    binding.destination_type === 'queue' && binding.routing_key
+                ).length;
+                
+                // Подсчитываем Route multiple consumer (routing_key с несколькими очередями)
                 const routeQueueCount = {};
                 filteredBindings.forEach(binding => {
                     if (binding.destination_type === 'queue' && binding.routing_key) {
@@ -960,21 +954,11 @@
                 });
                 const multiQueueRoutes = Object.values(routeQueueCount).filter(count => count > 1).length;
                 
-                // Подсчитываем уникальные очереди из отфильтрованных bindings
-                const uniqueQueues = new Set();
-                filteredBindings.forEach(binding => {
-                    if (binding.destination_type === 'queue') {
-                        uniqueQueues.add(binding.destination);
-                    }
-                });
-                
                 // Обновляем элементы статистики
                 document.getElementById('virtualHostCount').textContent = virtualHosts.size;
-                // Считаем количество только связанных Exchange, если есть bindings; иначе показываем количество отфильтрованных exchanges
-                const exchangeCount = relatedExchanges.size > 0 ? relatedExchanges.size : filteredExchanges.length;
-                document.getElementById('exchangeCount').textContent = exchangeCount;
-                document.getElementById('queueCount').textContent = uniqueQueues.size;
-                document.getElementById('routeCount').textContent = routes.size;
+                document.getElementById('exchangeCount').textContent = totalExchanges;
+                document.getElementById('queueCount').textContent = totalQueues;
+                document.getElementById('routeCount').textContent = totalRoutes;
                 document.getElementById('multiQueueRouteCount').textContent = multiQueueRoutes;
                 
             } catch (error) {
