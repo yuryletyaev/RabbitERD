@@ -410,6 +410,8 @@
                     return;
                 }
                 
+                console.log('Обновление визуализации, topology:', topology);
+                
                 g.selectAll('*').remove();
                 
                 const exchanges = topology.exchanges || [];
@@ -430,12 +432,17 @@
                 }
                 
                 // Создаем структуру данных
+                console.log('Создание блоков VirtualHost...');
                 const virtualHostBlocks = createVirtualHostBlocks(exchanges, queues, bindings);
+                console.log('Созданные блоки:', virtualHostBlocks);
                 
                 // Фильтруем данные
+                console.log('Фильтрация блоков...');
                 const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
+                console.log('Отфильтрованные блоки:', filteredBlocks);
                 
                 // Рисуем блоки
+                console.log('Рисование блоков...');
                 drawVirtualHostBlocks(filteredBlocks);
                 
                 // Настраиваем фильтры после обновления данных
@@ -453,8 +460,11 @@
         
         // Создание блоков VirtualHost
         function createVirtualHostBlocks(exchanges, queues, bindings) {
-            // Группируем по VirtualHost
-            const virtualHosts = {};
+            try {
+                console.log('createVirtualHostBlocks входные данные:', { exchanges, queues, bindings });
+                
+                // Группируем по VirtualHost
+                const virtualHosts = {};
             
             // Добавляем exchanges в VirtualHost
             exchanges.forEach(exchange => {
@@ -532,6 +542,14 @@
                     y: 50
                 };
             });
+            
+            console.log('createVirtualHostBlocks результат:', Object.values(virtualHosts));
+            return Object.values(virtualHosts);
+            
+            } catch (error) {
+                console.error('Ошибка в createVirtualHostBlocks:', error);
+                return [];
+            }
         }
         
         // Фильтрация блоков VirtualHost
@@ -601,6 +619,13 @@
         // Рисование блоков VirtualHost
         function drawVirtualHostBlocks(blocks) {
             try {
+                console.log('drawVirtualHostBlocks входные данные:', blocks);
+                
+                if (!blocks || !Array.isArray(blocks)) {
+                    console.error('Некорректные данные блоков:', blocks);
+                    return;
+                }
+                
                 // Сначала рассчитываем размеры всех блоков и их позиции
                 let currentX = 50; // Начальная позиция
                 
