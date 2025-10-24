@@ -86,9 +86,10 @@ async def root(request: Request):
                     {"name": "notification.queue", "vhost": "/"}
                 ],
                 "bindings": [
-                    {"source": "test.exchange", "destination": "user.queue", "routing_key": "user.*", "destination_type": "queue", "vhost": "/"},
-                    {"source": "user.exchange", "destination": "order.queue", "routing_key": "order.create", "destination_type": "queue", "vhost": "/"},
-                    {"source": "user.exchange", "destination": "notification.queue", "routing_key": "user.*", "destination_type": "queue", "vhost": "/"}
+                    {"source": "test.exchange", "destination": "user.queue", "routing_key": "user.created", "destination_type": "queue", "vhost": "/"},
+                    {"source": "user.exchange", "destination": "order.queue", "routing_key": "order.created", "destination_type": "queue", "vhost": "/"},
+                    {"source": "user.exchange", "destination": "notification.queue", "routing_key": "notification.send", "destination_type": "queue", "vhost": "/"},
+                    {"source": "test.exchange", "destination": "user.queue", "routing_key": "user.updated", "destination_type": "queue", "vhost": "/"}
                 ],
                 "connections": []
             }
@@ -125,9 +126,10 @@ async def get_topology():
                     {"name": "notification.queue", "vhost": "/"}
                 ],
                 "bindings": [
-                    {"source": "test.exchange", "destination": "user.queue", "routing_key": "user.*", "destination_type": "queue", "vhost": "/"},
-                    {"source": "user.exchange", "destination": "order.queue", "routing_key": "order.create", "destination_type": "queue", "vhost": "/"},
-                    {"source": "user.exchange", "destination": "notification.queue", "routing_key": "user.*", "destination_type": "queue", "vhost": "/"}
+                    {"source": "test.exchange", "destination": "user.queue", "routing_key": "user.created", "destination_type": "queue", "vhost": "/"},
+                    {"source": "user.exchange", "destination": "order.queue", "routing_key": "order.created", "destination_type": "queue", "vhost": "/"},
+                    {"source": "user.exchange", "destination": "notification.queue", "routing_key": "notification.send", "destination_type": "queue", "vhost": "/"},
+                    {"source": "test.exchange", "destination": "user.queue", "routing_key": "user.updated", "destination_type": "queue", "vhost": "/"}
                 ],
                 "connections": []
             }

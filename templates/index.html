@@ -105,6 +105,10 @@
             border-bottom: 1px solid #eee;
             font-size: 14px;
             line-height: 1.4;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
         
         .custom-dropdown-item:hover {
@@ -151,6 +155,10 @@
             cursor: pointer;
             border-bottom: 1px solid #eee;
             font-size: 14px;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
         
         .autocomplete-suggestion:hover,
@@ -451,7 +459,6 @@
                 
                 updateVisualization();
             } catch (error) {
-                console.error('Ошибка инициализации:', error);
                 document.querySelector('.visualization-container').innerHTML = 
                     '<div class="error-container"><h2>Ошибка инициализации</h2><p>' + error.message + '</p>';
             }
@@ -461,11 +468,9 @@
         function updateVisualization() {
             try {
                 if (!topology) {
-                    console.error('Данные топологии не загружены');
                     return;
                 }
                 
-                console.log('Обновление визуализации, topology:', topology);
                 
                 g.selectAll('*').remove();
                 
@@ -487,20 +492,15 @@
                 }
                 
                 // Создаем структуру данных
-                console.log('Создание блоков VirtualHost...');
                 const virtualHostBlocks = createVirtualHostBlocks(exchanges, queues, bindings);
-                console.log('Созданные блоки:', virtualHostBlocks);
                 
                 // Фильтруем данные
-                console.log('Фильтрация блоков...');
                 const filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
-                console.log('Отфильтрованные блоки:', filteredBlocks);
                 
                 // Сохраняем блоки для статистики
                 window.currentFilteredBlocks = filteredBlocks;
                 
                 // Рисуем блоки
-                console.log('Рисование блоков...');
                 drawVirtualHostBlocks(filteredBlocks);
                 
                 // Настраиваем фильтры после обновления данных
@@ -510,7 +510,6 @@
                 updateStats();
                 
             } catch (error) {
-                console.error('Ошибка обновления визуализации:', error);
                 document.querySelector('.visualization-container').innerHTML = 
                     '<div class="error-container"><h2>Ошибка визуализации</h2><p>' + error.message + '</p></div>';
             }
@@ -519,7 +518,6 @@
         // Создание блоков VirtualHost
         function createVirtualHostBlocks(exchanges, queues, bindings) {
             try {
-                console.log('createVirtualHostBlocks входные данные:', { exchanges, queues, bindings });
                 
                 // Группируем по VirtualHost
                 const virtualHosts = {};
@@ -528,7 +526,6 @@
             exchanges.forEach(exchange => {
                 // Пропускаем Exchange с пустыми именами
                 if (!exchange.name || exchange.name.trim() === '') {
-                    console.log('Пропускаем Exchange с пустым именем:', exchange);
                     return;
                 }
                 
@@ -609,24 +606,19 @@
                 };
             });
             
-            console.log('createVirtualHostBlocks результат:', Object.values(virtualHosts));
             return Object.values(virtualHosts);
             
             } catch (error) {
-                console.error('Ошибка в createVirtualHostBlocks:', error);
                 return [];
             }
         }
         
         // Фильтрация блоков VirtualHost
         function filterVirtualHostBlocks(blocks) {
-            console.log('Фильтрация с параметрами:', currentFilters);
-            console.log('Всего блоков до фильтрации:', blocks.length);
             
             const filtered = blocks.map(block => {
                 // Фильтруем VirtualHost по имени
                 if (currentFilters.virtualHost && block.virtualHost.name !== currentFilters.virtualHost) {
-                    console.log('Блок отфильтрован по VirtualHost:', block.virtualHost.name, '!=', currentFilters.virtualHost);
                     return null;
                 }
                 
@@ -634,7 +626,6 @@
                 const filteredExchanges = block.exchanges.filter(exchange => {
                     // Исключаем Exchange с пустыми именами
                     if (!exchange.exchange.name || exchange.exchange.name.trim() === '') {
-                        console.log('Исключаем Exchange с пустым именем:', exchange.exchange);
                         return false;
                     }
                     
@@ -684,17 +675,14 @@
                 return filteredExchanges.length > 0 ? block : null;
             }).filter(block => block !== null);
             
-            console.log('Блоков после фильтрации:', filtered.length);
             return filtered;
         }
         
         // Рисование блоков VirtualHost
         function drawVirtualHostBlocks(blocks) {
             try {
-                console.log('drawVirtualHostBlocks входные данные:', blocks);
                 
                 if (!blocks || !Array.isArray(blocks)) {
-                    console.error('Некорректные данные блоков:', blocks);
                     return;
                 }
                 
@@ -888,7 +876,6 @@
                     });
                 });
             } catch (error) {
-                console.error('Ошибка рисования блоков:', error);
                 g.append('text')
                     .attr('x', '50%')
                     .attr('y', '50%')
@@ -999,26 +986,18 @@
                 let filteredBlocks;
                 if (window.currentFilteredBlocks) {
                     filteredBlocks = window.currentFilteredBlocks;
-                    console.log('Статистика - используем существующие блоки:', filteredBlocks.length);
                 } else {
                     const virtualHostBlocks = createVirtualHostBlocks(filteredExchanges, filteredQueues, filteredBindings);
                     filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
-                    console.log('Статистика - создаем новые блоки:', filteredBlocks.length);
                 }
                 
                 // Подсчитываем количество VirtualHost из реально отображаемых блоков
                 const virtualHostCount = filteredBlocks.length;
                 
-                console.log('Статистика - отфильтрованные данные:', {
-                    exchanges: filteredExchanges.length,
-                    queues: filteredQueues.length,
-                    bindings: filteredBindings.length
-                });
                 
                 // Считаем количество Exchange, которые реально отображаются в диаграмме
                 let totalExchanges = 0;
                 filteredBlocks.forEach(block => {
-                    console.log('Блок VirtualHost:', block.virtualHost, 'Exchanges:', block.exchanges.length);
                     totalExchanges += block.exchanges.length;
                 });
                 
@@ -1026,9 +1005,7 @@
                 let totalQueues = 0;
                 filteredBlocks.forEach(block => {
                     block.exchanges.forEach(exchange => {
-                        console.log('Exchange:', exchange.exchange.name, 'Routes:', exchange.routes.length);
                         exchange.routes.forEach(route => {
-                            console.log('Route:', route.name, 'Queues:', route.queues.length);
                             totalQueues += route.queues.length;
                         });
                     });
@@ -1055,18 +1032,7 @@
                 });
                 const multiQueueRoutes = Object.keys(routeQueueCount).length;
                 
-                console.log('Route multiple consumer - детали:', {
-                    routeQueueCount: routeQueueCount,
-                    multiQueueRoutes: multiQueueRoutes
-                });
                 
-                console.log('Статистика - результаты подсчета:', {
-                    virtualHosts: virtualHostCount,
-                    exchanges: totalExchanges,
-                    queues: totalQueues,
-                    routes: totalRoutes,
-                    multiQueueRoutes: multiQueueRoutes
-                });
                 
                 // Обновляем элементы статистики
                 document.getElementById('virtualHostCount').textContent = virtualHostCount;
@@ -1076,7 +1042,6 @@
                 document.getElementById('multiQueueRouteCount').textContent = multiQueueRoutes;
                 
             } catch (error) {
-                console.error('Ошибка обновления статистики:', error);
             }
         }
         
@@ -1147,6 +1112,10 @@
                     virtualHostDropdown.style.display = 'none';
                     updateVisualization();
                 };
+                item.onmousedown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                };
                 virtualHostDropdown.appendChild(item);
             });
             }
@@ -1155,6 +1124,11 @@
             if (exchangeDropdown) {
                 exchangeDropdown.innerHTML = '';
             exchanges.forEach(exchange => {
+                // Пропускаем Exchange с пустыми именами
+                if (!exchange.name || exchange.name.trim() === '') {
+                    return;
+                }
+                
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
                 item.textContent = exchange.name;
@@ -1166,6 +1140,10 @@
                     exchangeDropdown.style.display = 'none';
                     updateVisualization();
                 };
+                item.onmousedown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                };
                 exchangeDropdown.appendChild(item);
             });
             }
@@ -1174,6 +1152,11 @@
             if (queueDropdown) {
                 queueDropdown.innerHTML = '';
             queues.forEach(queue => {
+                // Пропускаем Queue с пустыми именами
+                if (!queue.name || queue.name.trim() === '') {
+                    return;
+                }
+                
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
                 item.textContent = queue.name;
@@ -1185,6 +1168,10 @@
                     queueDropdown.style.display = 'none';
                     updateVisualization();
                 };
+                item.onmousedown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                };
                 queueDropdown.appendChild(item);
             });
             }
@@ -1194,7 +1181,7 @@
                 routeDropdown.innerHTML = '';
             const routes = new Set();
             bindings.forEach(binding => {
-                if (binding.routing_key) {
+                if (binding.routing_key && binding.routing_key.trim() !== '') {
                     routes.add(binding.routing_key);
                 }
             });
@@ -1210,6 +1197,10 @@
                     routeDropdown.style.display = 'none';
                     updateVisualization();
                 };
+                item.onmousedown = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                };
                 routeDropdown.appendChild(item);
             });
             }
@@ -1222,7 +1213,6 @@
             
             // Проверяем, что элементы существуют
             if (!newVirtualHostFilter || !newExchangeFilter || !newRouteFilter || !newQueueFilter) {
-                console.error('Не удалось найти элементы фильтров');
                 return;
             }
             
@@ -1401,7 +1391,6 @@
                         dropdown.style.display = 'none';
                     }
                 } catch (error) {
-                    console.error('Ошибка при открытии списка:', error);
                 }
             }
             
@@ -1485,13 +1474,13 @@
                         break;
                     case 'exchange':
                         suggestions = exchanges
-                            .filter(ex => ex.name && ex.name.toLowerCase().includes(searchValue))
+                            .filter(ex => ex.name && ex.name.trim() !== '' && ex.name.toLowerCase().includes(searchValue))
                             .map(ex => ex.name);
                         break;
                     case 'route':
                         const routes = new Set();
                         bindings.forEach(binding => {
-                            if (binding.routing_key && binding.routing_key.toLowerCase().includes(searchValue)) {
+                            if (binding.routing_key && binding.routing_key.trim() !== '' && binding.routing_key.toLowerCase().includes(searchValue)) {
                                 routes.add(binding.routing_key);
                             }
                         });
@@ -1499,7 +1488,7 @@
                         break;
                     case 'queue':
                         suggestions = queues
-                            .filter(q => q.name && q.name.toLowerCase().includes(searchValue))
+                            .filter(q => q.name && q.name.trim() !== '' && q.name.toLowerCase().includes(searchValue))
                             .map(q => q.name);
                         break;
                 }
@@ -1531,6 +1520,10 @@
                             hideAutocomplete(filterType);
                             updateVisualization();
                         }
+                    };
+                    item.onmousedown = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                     };
                     autocompleteEl.appendChild(item);
                 });
@@ -1568,7 +1561,6 @@
             if (typeof d3 !== 'undefined') {
                 initVisualization();
             } else {
-                console.error('D3.js не загружен');
                 document.querySelector('.visualization-container').innerHTML = 
                     '<div class="error-container"><h2>Ошибка загрузки D3.js</h2><p>Библиотека D3.js не загружена</p></div>';
             }
