@@ -1041,7 +1041,61 @@
                 document.getElementById('routeCount').textContent = totalRoutes;
                 document.getElementById('multiQueueRouteCount').textContent = multiQueueRoutes;
                 
+                // Центрируем диаграмму на экране
+                centerDiagram();
+                
             } catch (error) {
+            }
+        }
+        
+        // Функция центрирования диаграммы
+        function centerDiagram() {
+            try {
+                if (!window.currentFilteredBlocks || window.currentFilteredBlocks.length === 0) {
+                    return;
+                }
+                
+                // Получаем размеры контейнера
+                const container = document.getElementById('diagram-container');
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                
+                // Рассчитываем общие размеры диаграммы
+                let minX = Infinity;
+                let maxX = -Infinity;
+                let minY = Infinity;
+                let maxY = -Infinity;
+                
+                window.currentFilteredBlocks.forEach(block => {
+                    minX = Math.min(minX, block.x);
+                    maxX = Math.max(maxX, block.x + block.width);
+                    minY = Math.min(minY, block.y);
+                    maxY = Math.max(maxY, block.y + block.height);
+                });
+                
+                const diagramWidth = maxX - minX;
+                const diagramHeight = maxY - minY;
+                
+                // Рассчитываем центр диаграммы
+                const diagramCenterX = minX + diagramWidth / 2;
+                const diagramCenterY = minY + diagramHeight / 2;
+                
+                // Рассчитываем центр контейнера
+                const containerCenterX = containerWidth / 2;
+                const containerCenterY = containerHeight / 2;
+                
+                // Рассчитываем смещение для центрирования
+                const offsetX = containerCenterX - diagramCenterX;
+                const offsetY = containerCenterY - diagramCenterY;
+                
+                // Применяем трансформацию к SVG
+                const svg = d3.select('#diagram-container svg');
+                svg.transition()
+                    .duration(500)
+                    .attr('transform', `translate(${offsetX}, ${offsetY})`);
+                    
+            } catch (error) {
+                console.error('Ошибка при центрировании диаграммы:', error);
             }
         }
         
@@ -1185,6 +1239,7 @@
                     routes.add(binding.routing_key);
                 }
             });
+            
             routes.forEach(route => {
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
@@ -1563,6 +1618,13 @@
             } else {
                 document.querySelector('.visualization-container').innerHTML = 
                     '<div class="error-container"><h2>Ошибка загрузки D3.js</h2><p>Библиотека D3.js не загружена</p></div>';
+            }
+        });
+        
+        // Обработчик изменения размера окна для центрирования диаграммы
+        window.addEventListener('resize', function() {
+            if (window.currentFilteredBlocks && window.currentFilteredBlocks.length > 0) {
+                centerDiagram();
             }
         });
     </script>
