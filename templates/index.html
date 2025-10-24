@@ -1098,24 +1098,27 @@
                 const scaleX = availableWidth / diagramWidth;
                 const scale = Math.min(scaleX, 1); // Не увеличиваем больше 100%
                 
-                // Рассчитываем центр диаграммы
+                // Рассчитываем центр диаграммы по горизонтали
                 const diagramCenterX = minX + diagramWidth / 2;
-                const diagramCenterY = minY + diagramHeight / 2;
                 
-                // Рассчитываем центр контейнера
+                // Рассчитываем центр контейнера по горизонтали
                 const containerCenterX = containerWidth / 2;
-                const containerCenterY = containerHeight / 2;
+                
+                // Для вертикали показываем верхнюю часть диаграммы
+                const topOffset = 50; // Отступ сверху
+                const diagramTopY = minY;
+                const containerTopY = topOffset;
                 
                 // Рассчитываем смещение для центрирования
                 const offsetX = containerCenterX - (diagramCenterX * scale);
-                const offsetY = containerCenterY - (diagramCenterY * scale);
+                const offsetY = containerTopY - (diagramTopY * scale);
                 
                 console.log('Centering diagram:', {
                     containerWidth, containerHeight,
                     diagramWidth, diagramHeight,
                     scaleX, scale,
-                    diagramCenterX, diagramCenterY,
-                    containerCenterX, containerCenterY,
+                    diagramCenterX, diagramTopY,
+                    containerCenterX, containerTopY,
                     offsetX, offsetY
                 });
                 
