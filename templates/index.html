@@ -94,15 +94,17 @@
             border-radius: 4px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 1000;
-            max-height: 200px;
+            max-height: 400px;
             overflow-y: auto;
             margin-top: 2px;
         }
         
         .custom-dropdown-item {
-            padding: 8px 12px;
+            padding: 12px 16px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
+            font-size: 14px;
+            line-height: 1.4;
         }
         
         .custom-dropdown-item:hover {
@@ -110,6 +112,53 @@
         }
         
         .custom-dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Подсветка совпадений */
+        .custom-dropdown-item.highlighted {
+            background: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+        
+        .custom-dropdown-item.highlighted:hover {
+            background: #bbdefb;
+        }
+        
+        /* Стили для автодополнения */
+        .filter-input-row {
+            position: relative;
+        }
+        
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .autocomplete-suggestion {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        
+        .autocomplete-suggestion:hover,
+        .autocomplete-suggestion.highlighted {
+            background: #e3f2fd;
+        }
+        
+        .autocomplete-suggestion:last-child {
             border-bottom: none;
         }
         .stats-container {
@@ -304,6 +353,7 @@
                             <input type="text" id="virtualHostFilter">
                             <button type="button" id="virtualHostOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="virtualHostReset" class="filter-reset" title="Сбросить VirtualHost" aria-label="Сбросить VirtualHost">×</button>
+                            <div class="autocomplete-suggestions" id="virtualHostAutocomplete"></div>
                         </div>
                         <div class="custom-dropdown" id="virtualHostDropdown" style="display: none;"></div>
                     </div>
@@ -313,6 +363,7 @@
                             <input type="text" id="exchangeFilter">
                             <button type="button" id="exchangeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="exchangeReset" class="filter-reset" title="Сбросить Exchange" aria-label="Сбросить Exchange">×</button>
+                            <div class="autocomplete-suggestions" id="exchangeAutocomplete"></div>
                         </div>
                         <div class="custom-dropdown" id="exchangeDropdown" style="display: none;"></div>
                     </div>
@@ -322,6 +373,7 @@
                             <input type="text" id="routeFilter">
                             <button type="button" id="routeOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="routeReset" class="filter-reset" title="Сбросить RoutingKey" aria-label="Сбросить RoutingKey">×</button>
+                            <div class="autocomplete-suggestions" id="routeAutocomplete"></div>
                         </div>
                         <div class="custom-dropdown" id="routeDropdown" style="display: none;"></div>
                     </div>
@@ -331,6 +383,7 @@
                             <input type="text" id="queueFilter">
                             <button type="button" id="queueOpen" class="filter-open" title="Открыть список" aria-label="Открыть список">▾</button>
                             <button type="button" id="queueReset" class="filter-reset" title="Сбросить Queue" aria-label="Сбросить Queue">×</button>
+                            <div class="autocomplete-suggestions" id="queueAutocomplete"></div>
                         </div>
                         <div class="custom-dropdown" id="queueDropdown" style="display: none;"></div>
                     </div>
@@ -473,6 +526,12 @@
             
             // Добавляем exchanges в VirtualHost
             exchanges.forEach(exchange => {
+                // Пропускаем Exchange с пустыми именами
+                if (!exchange.name || exchange.name.trim() === '') {
+                    console.log('Пропускаем Exchange с пустым именем:', exchange);
+                    return;
+                }
+                
                 const vhost = exchange.vhost || '/';
                 if (!virtualHosts[vhost]) {
                     virtualHosts[vhost] = {
@@ -497,9 +556,10 @@
             // Создаем структуру для каждого VirtualHost
             return Object.values(virtualHosts).map((vhost, index) => {
                 const vhostExchanges = vhost.exchanges.map(exchange => {
-                    // Находим связанные очереди через bindings
+                    // Находим связанные очереди через bindings в том же VirtualHost
+                    // В RabbitMQ binding: source = exchange, destination = queue
                     const relatedBindings = bindings.filter(binding => 
-                        binding.source === exchange.name || binding.destination === exchange.name
+                        binding.source === exchange.name && binding.vhost === exchange.vhost
                     );
                     
                     // Группируем по роутам (routing_key)
@@ -516,9 +576,10 @@
                     const routeList = Object.keys(routes).map(routeKey => {
                         const routeBindings = routes[routeKey];
                         const routeQueues = routeBindings.map(binding => {
-                            const queueName = binding.destination === exchange.name ? 
-                                binding.source : binding.destination;
-                            return queues.find(q => q.name === queueName);
+                            // В RabbitMQ binding: source = exchange, destination = queue
+                            const queueName = binding.destination;
+                            // Ищем очередь в том же VirtualHost, что и exchange
+                            return queues.find(q => q.name === queueName && q.vhost === exchange.vhost);
                         }).filter(q => q);
                         
                         return {
@@ -571,6 +632,12 @@
                 
                 // Фильтруем exchanges внутри блока
                 const filteredExchanges = block.exchanges.filter(exchange => {
+                    // Исключаем Exchange с пустыми именами
+                    if (!exchange.exchange.name || exchange.exchange.name.trim() === '') {
+                        console.log('Исключаем Exchange с пустым именем:', exchange.exchange);
+                        return false;
+                    }
+                    
                     // Фильтр по exchange
                     if (currentFilters.exchange && exchange.exchange.name !== currentFilters.exchange) {
                         return false;
@@ -757,7 +824,7 @@
                             .attr('fill', '#333')
                             .attr('font-weight', 'bold')
                             .attr('font-size', '14px')
-                            .text(`Exchange: ${exchangeData.exchange.name}`);
+                            .text(`Exchange: ${exchangeData.exchange.name || '(без имени)'}`);
                         
                         // Рисуем роуты для каждого exchange
                         let routeY = 50;
@@ -927,15 +994,6 @@
                     return true;
                 });
                 
-                // Подсчитываем уникальные VirtualHost из отфильтрованных данных
-                const virtualHosts = new Set();
-                filteredExchanges.forEach(exchange => {
-                    virtualHosts.add(exchange.vhost || '/');
-                });
-                filteredQueues.forEach(queue => {
-                    virtualHosts.add(queue.vhost || '/');
-                });
-                
                 // Используем те же блоки, что и в диаграмме (передаем их из updateVisualization)
                 // Если блоки не переданы, создаем их заново
                 let filteredBlocks;
@@ -947,6 +1005,9 @@
                     filteredBlocks = filterVirtualHostBlocks(virtualHostBlocks);
                     console.log('Статистика - создаем новые блоки:', filteredBlocks.length);
                 }
+                
+                // Подсчитываем количество VirtualHost из реально отображаемых блоков
+                const virtualHostCount = filteredBlocks.length;
                 
                 console.log('Статистика - отфильтрованные данные:', {
                     exchanges: filteredExchanges.length,
@@ -1000,7 +1061,7 @@
                 });
                 
                 console.log('Статистика - результаты подсчета:', {
-                    virtualHosts: virtualHosts.size,
+                    virtualHosts: virtualHostCount,
                     exchanges: totalExchanges,
                     queues: totalQueues,
                     routes: totalRoutes,
@@ -1008,7 +1069,7 @@
                 });
                 
                 // Обновляем элементы статистики
-                document.getElementById('virtualHostCount').textContent = virtualHosts.size;
+                document.getElementById('virtualHostCount').textContent = virtualHostCount;
                 document.getElementById('exchangeCount').textContent = totalExchanges;
                 document.getElementById('queueCount').textContent = totalQueues;
                 document.getElementById('routeCount').textContent = totalRoutes;
@@ -1171,10 +1232,12 @@
             newVirtualHostFilter.onblur = null;
             newVirtualHostFilter.oninput = (e) => {
                 currentFilters.virtualHost = e.target.value;
+                showAutocomplete('virtualHost', e.target.value);
                 debouncedUpdate();
             };
             newVirtualHostFilter.onblur = () => {
                 clearTimeout(updateTimeout);
+                hideAutocomplete('virtualHost');
                 updateVisualization();
             };
             
@@ -1182,10 +1245,12 @@
             newExchangeFilter.onblur = null;
             newExchangeFilter.oninput = (e) => {
                 currentFilters.exchange = e.target.value;
+                showAutocomplete('exchange', e.target.value);
                 debouncedUpdate();
             };
             newExchangeFilter.onblur = () => {
                 clearTimeout(updateTimeout);
+                hideAutocomplete('exchange');
                 updateVisualization();
             };
             
@@ -1193,10 +1258,12 @@
             newRouteFilter.onblur = null;
             newRouteFilter.oninput = (e) => {
                 currentFilters.route = e.target.value;
+                showAutocomplete('route', e.target.value);
                 debouncedUpdate();
             };
             newRouteFilter.onblur = () => {
                 clearTimeout(updateTimeout);
+                hideAutocomplete('route');
                 updateVisualization();
             };
             
@@ -1204,10 +1271,12 @@
             newQueueFilter.onblur = null;
             newQueueFilter.oninput = (e) => {
                 currentFilters.queue = e.target.value;
+                showAutocomplete('queue', e.target.value);
                 debouncedUpdate();
             };
             newQueueFilter.onblur = () => {
                 clearTimeout(updateTimeout);
+                hideAutocomplete('queue');
                 updateVisualization();
             };
             
@@ -1218,6 +1287,7 @@
                 virtualHostReset.onclick = () => {
                     newVirtualHostFilter.value = '';
                     currentFilters.virtualHost = '';
+                    hideAutocomplete('virtualHost');
                     updateVisualization();
                 };
             }
@@ -1227,6 +1297,7 @@
                 exchangeReset.onclick = () => {
                     newExchangeFilter.value = '';
                     currentFilters.exchange = '';
+                    hideAutocomplete('exchange');
                     updateVisualization();
                 };
             }
@@ -1236,6 +1307,7 @@
                 routeReset.onclick = () => {
                     newRouteFilter.value = '';
                     currentFilters.route = '';
+                    hideAutocomplete('route');
                     updateVisualization();
                 };
             }
@@ -1245,6 +1317,7 @@
                 queueReset.onclick = () => {
                     newQueueFilter.value = '';
                     currentFilters.queue = '';
+                    hideAutocomplete('queue');
                     updateVisualization();
                 };
             }
@@ -1322,6 +1395,88 @@
             if (currentQueue) {
                 newQueueFilter.value = currentQueue;
                 currentFilters.queue = currentQueue;
+            }
+            
+            // Функции автодополнения
+            function showAutocomplete(filterType, value) {
+                if (!value || value.trim() === '') {
+                    hideAutocomplete(filterType);
+                    return;
+                }
+                
+                const autocompleteEl = document.getElementById(`${filterType}Autocomplete`);
+                if (!autocompleteEl) return;
+                
+                // Получаем данные для автодополнения
+                let suggestions = [];
+                const searchValue = value.toLowerCase();
+                
+                switch(filterType) {
+                    case 'virtualHost':
+                        const virtualHosts = new Set();
+                        exchanges.forEach(ex => virtualHosts.add(ex.vhost || '/'));
+                        queues.forEach(q => virtualHosts.add(q.vhost || '/'));
+                        suggestions = Array.from(virtualHosts).filter(vh => 
+                            vh.toLowerCase().includes(searchValue)
+                        );
+                        break;
+                    case 'exchange':
+                        suggestions = exchanges
+                            .filter(ex => ex.name && ex.name.toLowerCase().includes(searchValue))
+                            .map(ex => ex.name);
+                        break;
+                    case 'route':
+                        const routes = new Set();
+                        bindings.forEach(binding => {
+                            if (binding.routing_key && binding.routing_key.toLowerCase().includes(searchValue)) {
+                                routes.add(binding.routing_key);
+                            }
+                        });
+                        suggestions = Array.from(routes);
+                        break;
+                    case 'queue':
+                        suggestions = queues
+                            .filter(q => q.name && q.name.toLowerCase().includes(searchValue))
+                            .map(q => q.name);
+                        break;
+                }
+                
+                // Ограничиваем количество предложений
+                suggestions = suggestions.slice(0, 10);
+                
+                if (suggestions.length === 0) {
+                    hideAutocomplete(filterType);
+                    return;
+                }
+                
+                // Очищаем предыдущие предложения
+                autocompleteEl.innerHTML = '';
+                
+                // Добавляем новые предложения
+                suggestions.forEach(suggestion => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-suggestion';
+                    item.textContent = suggestion;
+                    item.onclick = () => {
+                        const inputEl = document.getElementById(`${filterType}Filter`);
+                        if (inputEl) {
+                            inputEl.value = suggestion;
+                            currentFilters[filterType] = suggestion;
+                            updateVisualization();
+                        }
+                        hideAutocomplete(filterType);
+                    };
+                    autocompleteEl.appendChild(item);
+                });
+                
+                autocompleteEl.style.display = 'block';
+            }
+            
+            function hideAutocomplete(filterType) {
+                const autocompleteEl = document.getElementById(`${filterType}Autocomplete`);
+                if (autocompleteEl) {
+                    autocompleteEl.style.display = 'none';
+                }
             }
         }
         
