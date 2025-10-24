@@ -1058,7 +1058,7 @@
                 }
                 
                 // Получаем размеры контейнера
-                const container = document.getElementById('diagram-container');
+                const container = document.getElementById('diagram');
                 if (!container) {
                     console.log('Container not found');
                     return;
@@ -1110,7 +1110,7 @@
                 });
                 
                 // Применяем трансформацию к группе g внутри SVG
-                const svg = d3.select('#diagram-container svg');
+                const svg = d3.select('#diagram');
                 if (svg.empty()) {
                     console.log('SVG not found');
                     return;
