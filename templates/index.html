@@ -1090,15 +1090,13 @@
                 const diagramWidth = maxX - minX;
                 const diagramHeight = maxY - minY;
                 
-                // Добавляем отступы
+                // Добавляем отступы только по горизонтали
                 const padding = 50;
                 const availableWidth = containerWidth - (padding * 2);
-                const availableHeight = containerHeight - (padding * 2);
                 
-                // Рассчитываем масштаб для полного размещения в контейнере
+                // Рассчитываем масштаб только по горизонтали для полного размещения
                 const scaleX = availableWidth / diagramWidth;
-                const scaleY = availableHeight / diagramHeight;
-                const scale = Math.min(scaleX, scaleY, 1); // Не увеличиваем больше 100%
+                const scale = Math.min(scaleX, 1); // Не увеличиваем больше 100%
                 
                 // Рассчитываем центр диаграммы
                 const diagramCenterX = minX + diagramWidth / 2;
@@ -1115,7 +1113,7 @@
                 console.log('Centering diagram:', {
                     containerWidth, containerHeight,
                     diagramWidth, diagramHeight,
-                    scaleX, scaleY, scale,
+                    scaleX, scale,
                     diagramCenterX, diagramCenterY,
                     containerCenterX, containerCenterY,
                     offsetX, offsetY
