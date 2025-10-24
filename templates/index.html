@@ -1096,13 +1096,25 @@
                 const offsetX = containerCenterX - diagramCenterX;
                 const offsetY = containerCenterY - diagramCenterY;
                 
-                // Применяем трансформацию к SVG
+                console.log('Centering diagram:', {
+                    containerWidth, containerHeight,
+                    diagramCenterX, diagramCenterY,
+                    containerCenterX, containerCenterY,
+                    offsetX, offsetY
+                });
+                
+                // Применяем трансформацию к группе g внутри SVG
                 const svg = d3.select('#diagram-container svg');
                 if (svg.empty()) {
                     return;
                 }
                 
-                svg.transition()
+                const g = svg.select('g');
+                if (g.empty()) {
+                    return;
+                }
+                
+                g.transition()
                     .duration(500)
                     .attr('transform', `translate(${offsetX}, ${offsetY})`);
                     
