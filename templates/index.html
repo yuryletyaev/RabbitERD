@@ -1057,8 +1057,16 @@
                 
                 // Получаем размеры контейнера
                 const container = document.getElementById('diagram-container');
+                if (!container) {
+                    return;
+                }
+                
                 const containerWidth = container.clientWidth;
                 const containerHeight = container.clientHeight;
+                
+                if (containerWidth === 0 || containerHeight === 0) {
+                    return;
+                }
                 
                 // Рассчитываем общие размеры диаграммы
                 let minX = Infinity;
@@ -1090,12 +1098,16 @@
                 
                 // Применяем трансформацию к SVG
                 const svg = d3.select('#diagram-container svg');
+                if (svg.empty()) {
+                    return;
+                }
+                
                 svg.transition()
                     .duration(500)
                     .attr('transform', `translate(${offsetX}, ${offsetY})`);
                     
             } catch (error) {
-                console.error('Ошибка при центрировании диаграммы:', error);
+                // Ошибка при центрировании диаграммы - игнорируем
             }
         }
         
