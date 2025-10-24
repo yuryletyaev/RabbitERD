@@ -1237,8 +1237,16 @@
             };
             newVirtualHostFilter.onblur = () => {
                 clearTimeout(updateTimeout);
-                hideAutocomplete('virtualHost');
+                // Добавляем небольшую задержку перед скрытием автодополнения
+                setTimeout(() => {
+                    hideAutocomplete('virtualHost');
+                }, 150);
                 updateVisualization();
+            };
+            newVirtualHostFilter.onkeydown = (e) => {
+                if (e.key === 'Escape') {
+                    hideAutocomplete('virtualHost');
+                }
             };
             
             newExchangeFilter.oninput = null;
@@ -1250,8 +1258,15 @@
             };
             newExchangeFilter.onblur = () => {
                 clearTimeout(updateTimeout);
-                hideAutocomplete('exchange');
+                setTimeout(() => {
+                    hideAutocomplete('exchange');
+                }, 150);
                 updateVisualization();
+            };
+            newExchangeFilter.onkeydown = (e) => {
+                if (e.key === 'Escape') {
+                    hideAutocomplete('exchange');
+                }
             };
             
             newRouteFilter.oninput = null;
@@ -1263,8 +1278,15 @@
             };
             newRouteFilter.onblur = () => {
                 clearTimeout(updateTimeout);
-                hideAutocomplete('route');
+                setTimeout(() => {
+                    hideAutocomplete('route');
+                }, 150);
                 updateVisualization();
+            };
+            newRouteFilter.onkeydown = (e) => {
+                if (e.key === 'Escape') {
+                    hideAutocomplete('route');
+                }
             };
             
             newQueueFilter.oninput = null;
@@ -1276,15 +1298,24 @@
             };
             newQueueFilter.onblur = () => {
                 clearTimeout(updateTimeout);
-                hideAutocomplete('queue');
+                setTimeout(() => {
+                    hideAutocomplete('queue');
+                }, 150);
                 updateVisualization();
+            };
+            newQueueFilter.onkeydown = (e) => {
+                if (e.key === 'Escape') {
+                    hideAutocomplete('queue');
+                }
             };
             
             // Кнопки сброса (очищаем и переназначаем обработчики)
             
             if (virtualHostReset) {
                 virtualHostReset.onclick = null;
-                virtualHostReset.onclick = () => {
+                virtualHostReset.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newVirtualHostFilter.value = '';
                     currentFilters.virtualHost = '';
                     hideAutocomplete('virtualHost');
@@ -1294,7 +1325,9 @@
             
             if (exchangeReset) {
                 exchangeReset.onclick = null;
-                exchangeReset.onclick = () => {
+                exchangeReset.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newExchangeFilter.value = '';
                     currentFilters.exchange = '';
                     hideAutocomplete('exchange');
@@ -1304,7 +1337,9 @@
             
             if (routeReset) {
                 routeReset.onclick = null;
-                routeReset.onclick = () => {
+                routeReset.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newRouteFilter.value = '';
                     currentFilters.route = '';
                     hideAutocomplete('route');
@@ -1314,7 +1349,9 @@
             
             if (queueReset) {
                 queueReset.onclick = null;
-                queueReset.onclick = () => {
+                queueReset.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newQueueFilter.value = '';
                     currentFilters.queue = '';
                     hideAutocomplete('queue');
@@ -1354,6 +1391,12 @@
                     const allDropdowns = document.querySelectorAll('.custom-dropdown');
                     allDropdowns.forEach(dropdown => {
                         dropdown.style.display = 'none';
+                    });
+                    
+                    // Также закрываем все автодополнения
+                    const allAutocompletes = document.querySelectorAll('.autocomplete-suggestions');
+                    allAutocompletes.forEach(autocomplete => {
+                        autocomplete.style.display = 'none';
                     });
                 }
             });
@@ -1457,14 +1500,17 @@
                     const item = document.createElement('div');
                     item.className = 'autocomplete-suggestion';
                     item.textContent = suggestion;
-                    item.onclick = () => {
+                    item.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
                         const inputEl = document.getElementById(`${filterType}Filter`);
                         if (inputEl) {
                             inputEl.value = suggestion;
                             currentFilters[filterType] = suggestion;
+                            hideAutocomplete(filterType);
                             updateVisualization();
                         }
-                        hideAutocomplete(filterType);
                     };
                     autocompleteEl.appendChild(item);
                 });
