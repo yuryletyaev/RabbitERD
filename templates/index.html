@@ -1139,7 +1139,9 @@
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
                 item.textContent = vhost;
-                item.onclick = () => {
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newVirtualHostFilter.value = vhost;
                     currentFilters.virtualHost = vhost;
                     virtualHostDropdown.style.display = 'none';
@@ -1156,7 +1158,9 @@
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
                 item.textContent = exchange.name;
-                item.onclick = () => {
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newExchangeFilter.value = exchange.name;
                     currentFilters.exchange = exchange.name;
                     exchangeDropdown.style.display = 'none';
@@ -1173,7 +1177,9 @@
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
                 item.textContent = queue.name;
-                item.onclick = () => {
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newQueueFilter.value = queue.name;
                     currentFilters.queue = queue.name;
                     queueDropdown.style.display = 'none';
@@ -1196,7 +1202,9 @@
                 const item = document.createElement('div');
                 item.className = 'custom-dropdown-item';
                 item.textContent = route;
-                item.onclick = () => {
+                item.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     newRouteFilter.value = route;
                     currentFilters.route = route;
                     routeDropdown.style.display = 'none';
@@ -1319,6 +1327,7 @@
                     newVirtualHostFilter.value = '';
                     currentFilters.virtualHost = '';
                     hideAutocomplete('virtualHost');
+                    closeCustomDropdowns();
                     updateVisualization();
                 };
             }
@@ -1331,6 +1340,7 @@
                     newExchangeFilter.value = '';
                     currentFilters.exchange = '';
                     hideAutocomplete('exchange');
+                    closeCustomDropdowns();
                     updateVisualization();
                 };
             }
@@ -1343,6 +1353,7 @@
                     newRouteFilter.value = '';
                     currentFilters.route = '';
                     hideAutocomplete('route');
+                    closeCustomDropdowns();
                     updateVisualization();
                 };
             }
@@ -1355,10 +1366,19 @@
                     newQueueFilter.value = '';
                     currentFilters.queue = '';
                     hideAutocomplete('queue');
+                    closeCustomDropdowns();
                     updateVisualization();
                 };
             }
 
+            // Функция для закрытия кастомных выпадающих списков
+            function closeCustomDropdowns() {
+                const allDropdowns = document.querySelectorAll('.custom-dropdown');
+                allDropdowns.forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                });
+            }
+            
             // Кнопки открытия списка (кастомный выпадающий список)
             function openCustomDropdown(inputEl, dropdownId) {
                 try {
