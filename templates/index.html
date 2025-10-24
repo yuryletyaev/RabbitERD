@@ -315,7 +315,7 @@
         <header>
             <h1>RabbitMQ Visualizer</h1>
             <div class="controls">
-                <button id="refreshBtn" class="btn">Обновить</button>
+                <button id="refreshBtn" class="btn">Оцентровать диаграмму</button>
                 <button id="zoomInBtn" class="btn">+</button>
                 <button id="zoomOutBtn" class="btn">-</button>
             </div>
@@ -1608,7 +1608,7 @@
         
         // Обработчики кнопок
         document.getElementById('refreshBtn').addEventListener('click', () => {
-            updateVisualization();
+            centerDiagram();
         });
         
         document.getElementById('zoomInBtn').addEventListener('click', () => {
