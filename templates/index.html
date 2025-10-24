@@ -1050,21 +1050,27 @@
         
         // Функция центрирования диаграммы
         function centerDiagram() {
+            console.log('centerDiagram() called');
             try {
                 if (!window.currentFilteredBlocks || window.currentFilteredBlocks.length === 0) {
+                    console.log('No filtered blocks found');
                     return;
                 }
                 
                 // Получаем размеры контейнера
                 const container = document.getElementById('diagram-container');
                 if (!container) {
+                    console.log('Container not found');
                     return;
                 }
                 
                 const containerWidth = container.clientWidth;
                 const containerHeight = container.clientHeight;
                 
+                console.log('Container dimensions:', containerWidth, containerHeight);
+                
                 if (containerWidth === 0 || containerHeight === 0) {
+                    console.log('Container has zero dimensions');
                     return;
                 }
                 
@@ -1106,11 +1112,13 @@
                 // Применяем трансформацию к группе g внутри SVG
                 const svg = d3.select('#diagram-container svg');
                 if (svg.empty()) {
+                    console.log('SVG not found');
                     return;
                 }
                 
                 const g = svg.select('g');
                 if (g.empty()) {
+                    console.log('Group g not found');
                     return;
                 }
                 
@@ -1620,6 +1628,7 @@
         
         // Обработчики кнопок
         document.getElementById('refreshBtn').addEventListener('click', () => {
+            console.log('Center button clicked');
             centerDiagram();
         });
         
