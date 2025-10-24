@@ -1132,9 +1132,16 @@
                     return;
                 }
                 
-                g.transition()
-                    .duration(500)
-                    .attr('transform', `translate(${offsetX}, ${offsetY}) scale(${scale})`);
+                // Сбрасываем состояние зума с плавной анимацией
+                if (zoom) {
+                    svg.transition()
+                        .duration(500)
+                        .call(zoom.transform, d3.zoomIdentity.translate(offsetX, offsetY).scale(scale));
+                } else {
+                    g.transition()
+                        .duration(500)
+                        .attr('transform', `translate(${offsetX}, ${offsetY}) scale(${scale})`);
+                }
                     
             } catch (error) {
                 // Ошибка при центрировании диаграммы - игнорируем
