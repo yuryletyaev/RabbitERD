@@ -1090,6 +1090,16 @@
                 const diagramWidth = maxX - minX;
                 const diagramHeight = maxY - minY;
                 
+                // Добавляем отступы
+                const padding = 50;
+                const availableWidth = containerWidth - (padding * 2);
+                const availableHeight = containerHeight - (padding * 2);
+                
+                // Рассчитываем масштаб для полного размещения в контейнере
+                const scaleX = availableWidth / diagramWidth;
+                const scaleY = availableHeight / diagramHeight;
+                const scale = Math.min(scaleX, scaleY, 1); // Не увеличиваем больше 100%
+                
                 // Рассчитываем центр диаграммы
                 const diagramCenterX = minX + diagramWidth / 2;
                 const diagramCenterY = minY + diagramHeight / 2;
@@ -1099,11 +1109,13 @@
                 const containerCenterY = containerHeight / 2;
                 
                 // Рассчитываем смещение для центрирования
-                const offsetX = containerCenterX - diagramCenterX;
-                const offsetY = containerCenterY - diagramCenterY;
+                const offsetX = containerCenterX - (diagramCenterX * scale);
+                const offsetY = containerCenterY - (diagramCenterY * scale);
                 
                 console.log('Centering diagram:', {
                     containerWidth, containerHeight,
+                    diagramWidth, diagramHeight,
+                    scaleX, scaleY, scale,
                     diagramCenterX, diagramCenterY,
                     containerCenterX, containerCenterY,
                     offsetX, offsetY
@@ -1124,7 +1136,7 @@
                 
                 g.transition()
                     .duration(500)
-                    .attr('transform', `translate(${offsetX}, ${offsetY})`);
+                    .attr('transform', `translate(${offsetX}, ${offsetY}) scale(${scale})`);
                     
             } catch (error) {
                 // Ошибка при центрировании диаграммы - игнорируем
